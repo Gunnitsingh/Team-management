@@ -1,0 +1,12 @@
+# .NET
+backend/bin/
+backend/obj/
+
+# Angular
+frontend/node_modules/
+frontend/dist/
+
+# Common
+.vscode/
+.env
+.DS_Store
