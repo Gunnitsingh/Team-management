@@ -88,11 +88,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/Users/guneetsingh/Desktop/Apps/team-management-api/team-management-api.csproj",
+      "projectUniqueName": "/Users/guneetsingh/Desktop/team-management/Team-management/team-management-api/team-management-api.csproj",
       "projectName": "team-management-api",
-      "projectPath": "/Users/guneetsingh/Desktop/Apps/team-management-api/team-management-api.csproj",
+      "projectPath": "/Users/guneetsingh/Desktop/team-management/Team-management/team-management-api/team-management-api.csproj",
       "packagesPath": "/Users/guneetsingh/.nuget/packages/",
-      "outputPath": "/Users/guneetsingh/Desktop/Apps/team-management-api/obj/",
+      "outputPath": "/Users/guneetsingh/Desktop/team-management/Team-management/team-management-api/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "/Users/guneetsingh/.nuget/NuGet/NuGet.Config"
