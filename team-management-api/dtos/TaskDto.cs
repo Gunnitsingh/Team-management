@@ -5,6 +5,7 @@ public class TaskDto
     public string Status { get; set; }
     public string Priority { get; set; }
 
+    public string Description { get; set; }
     public int? AssignedToId { get; set; }
     public string? AssignedToName { get; set; }
 

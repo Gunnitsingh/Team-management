@@ -13,11 +13,9 @@ public class TasksController : ControllerBase
     }
 
     [HttpGet]
-    [HttpGet]
 public async Task<IActionResult> GetTasks()
 {
     var tasks = await _context.Tasks
-        .Include(t => t.AssignedToUser) // navigation property
         .Select(t => new TaskDto
         {
             Id = t.Id,
@@ -26,7 +24,8 @@ public async Task<IActionResult> GetTasks()
             Priority = t.Priority,
             AssignedToId = t.AssignedTo,
             AssignedToName = t.AssignedToUser != null ? t.AssignedToUser.Name : null,
-            CreatedDate = t.CreatedDate
+            CreatedDate = t.CreatedDate,
+            Description = t.Description ?? string.Empty
         })
         .ToListAsync();
 
@@ -53,4 +52,31 @@ public async Task<IActionResult> GetTasks()
 
         return Ok(task);
     }
+
+    [HttpPut("{id}/status")]
+public async Task<IActionResult> UpdateTaskStatus(int id, UpdateTaskStatusDto dto)
+{
+    var task = await _context.Tasks.FindAsync(id);
+
+    if (task == null)
+        return NotFound();
+
+if (!IsValidStatus(dto.Status))
+{
+    return BadRequest("Invalid status");
+}
+
+    task.Status = dto.Status;
+
+    await _context.SaveChangesAsync();
+
+    return Ok(task);
+}
+
+private bool IsValidStatus(string status)
+{
+    var allowedStatuses = new[] { "BACKLOG", "TODO", "IN_PROGRESS", "REVIEW", "DONE" };
+    return allowedStatuses.Contains(status);    
+}
+
 }
