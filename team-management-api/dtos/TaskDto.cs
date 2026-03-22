@@ -10,4 +10,5 @@ public class TaskDto
     public string? AssignedToName { get; set; }
 
     public DateTime CreatedDate { get; set; }
+    public DateTime? DueDate {get; set; }
 }

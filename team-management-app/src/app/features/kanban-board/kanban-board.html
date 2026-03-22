@@ -1,28 +1,35 @@
-<div *ngIf="tasksByStatus$ | async as grouped">
+<div>
+  <div *ngIf="tasksByStatus$ | async as grouped">
+    <div>
+      <h1 style="text-align: center">Kanban Board</h1>
+      <div>
+        <button style="margin: .5rem;" matButton="filled" (click)="openCreateTaskModal()">Create Task</button>
+        <div style="display: flex; gap: 1rem; margin: .5rem;">
 
-  <div style="display: flex; gap: 16px;">
+          <div *ngFor="let column of columns" cdkDropList [cdkDropListData]="grouped[column]"
+            [cdkDropListConnectedTo]="columns" [id]="column" (cdkDropListDropped)="drop($event)"
+            style="flex: 1; border: 1px solid #ccc; padding: 10px; border-radius: 6px; min-height: 400px;">
 
-    <div *ngFor="let column of columns" cdkDropList [cdkDropListData]="grouped[column]"
-      [cdkDropListConnectedTo]="columns" [id]="column" (cdkDropListDropped)="drop($event)"
-      style="flex: 1; border: 1px solid #ccc; padding: 10px;">
+            <h3>{{ column }}</h3>
 
-      <h3>{{ column }}</h3>
-
-      <div *ngFor="let task of grouped[column]" cdkDrag
-        style="background: #f5f5f5; margin-bottom: 10px; padding: 8px; border-radius: 4px;">
-
-        <strong>{{ task.title }}</strong>
-        <div>{{ task.assignedToName }}</div>
-        <div>{{ task.priority }}</div>
-        <div>{{ task.description }}</div>
-
+            @for(task of grouped[column]; track task.id){
+            <div cdkDrag (click)="openEditTask(task)"
+              style="background: #f5f5f5; margin-bottom: 10px; padding: 8px; border-radius: 4px;background-color: lightskyblue;min-height: 120px;">
+              <strong>{{ task.title }}</strong>
+              <div>{{ task.assignedToName }}</div>
+              <div>{{ task.priority }}</div>
+              <div>{{ task.description }}</div>
+              <div>{{ task.dueDate | date}}</div>
+            </div>
+            }
+          </div>
+        </div>
       </div>
-
     </div>
-
   </div>
-
 </div>
+
+
 <ng-template #loading>
   <div>Loading...</div>
 </ng-template>

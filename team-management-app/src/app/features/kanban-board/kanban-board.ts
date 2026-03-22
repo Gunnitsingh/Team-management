@@ -1,28 +1,40 @@
 import { Component, inject, OnInit } from '@angular/core';
-import { Task } from '../../core/services/task-interface';
-import { TaskService } from '../../core/services/task.service';
+import { CreateTaskInterface, Task } from '../../core/services/tasks/task-interface';
+import { TaskService } from '../../core/services/tasks/task.service';
 import { CommonModule } from '@angular/common';
-import { BehaviorSubject, map, Observable, take } from 'rxjs';
+import { BehaviorSubject, map, Observable, switchMap, take, tap } from 'rxjs';
 import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { kanbanColumns } from '../../contants/constants';
+import { MatButtonModule } from '@angular/material/button';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { CreateTaskComponent } from '../create-task/create-task';
+import { Users } from '../../core/services/users/users.interface';
+import { UsersService } from '../../core/services/users/users';
 
 @Component({
   selector: 'app-kanban-board',
-  imports: [CommonModule, DragDropModule],
+  imports: [CommonModule, DragDropModule, MatButtonModule, MatDialogModule],
   templateUrl: './kanban-board.html',
   styleUrl: './kanban-board.css',
+  standalone: true
 })
 export class KanbanBoard implements OnInit {
 
   public columns = kanbanColumns;
   tasksByStatus$ = new Observable<any>();
+  public users$ = new Observable<Users[]>()
   private tasksSubject = new BehaviorSubject<Task[]>([]);
   private readonly taskService = inject(TaskService);
+  private readonly dialog = inject(MatDialog);
+   private readonly userService = inject(UsersService);
+
+
   ngOnInit() {
     this.taskService.getTasks().pipe(take(1)).subscribe(tasks => {
       this.tasksSubject.next(tasks);
     });
     this.getTasks();
+    this.users$ = this.userService.getAllUsers()
   }
 
   getTasks() {
@@ -62,4 +74,49 @@ export class KanbanBoard implements OnInit {
       }
     });
   }
+
+  openCreateTaskModal() {
+    const dialogRef = this.dialog.open(CreateTaskComponent, {
+      minHeight: '400px',
+      maxHeight: '100%',
+      width: '600px',
+      data : { title : 'Create', users : this.users$}
+    });
+
+    dialogRef.afterClosed()
+      .pipe(take(1),
+        switchMap((newTask: CreateTaskInterface) => this.taskService.createTask(newTask)),
+        tap((createdTask) => {
+          const updatedTasks = [
+            ...this.tasksSubject.getValue(),
+            createdTask
+          ];
+          this.tasksSubject.next(updatedTasks);
+        })
+      )
+      .subscribe();
+  }
+
+  public openEditTask(editTask: Task) {
+    const dialogRef = this.dialog.open(CreateTaskComponent, {
+      minHeight: '400px',
+      maxHeight: '100%',
+      width: '600px',
+      data:{title : 'Edit', users : this.users$, task :  editTask},
+    });
+
+    dialogRef.afterClosed()
+      .pipe(take(1),
+        switchMap((editedTask: CreateTaskInterface) => this.taskService.editTask(editTask.id, editedTask)),
+        tap((updatedTask) => {
+          const tasks = this.tasksSubject.getValue();
+          const updated = tasks.map(t =>
+            t.id === updatedTask.id ? updatedTask : t
+          );
+          this.tasksSubject.next(updated);
+        })
+      )
+      .subscribe();
+  }
 }
+

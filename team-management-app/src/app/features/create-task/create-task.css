@@ -1,0 +1,26 @@
+.example-form {
+  min-width: 150px;
+  max-width: 100%;
+  width: 100%;
+}
+
+.example-full-width {
+  width: 100%;
+}
+
+td {
+  padding-right: 8px;
+}
+
+.form-style{
+    padding: 1rem;
+}
+
+.select-field{
+   min-width: 45%;
+    align-items: center;
+}
+
+.assignto-field{
+  margin-left: 3rem;
+}
