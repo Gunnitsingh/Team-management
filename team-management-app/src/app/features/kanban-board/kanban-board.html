@@ -10,7 +10,7 @@
             [cdkDropListConnectedTo]="columns" [id]="column" (cdkDropListDropped)="drop($event)"
             style="flex: 1; border: 1px solid #ccc; padding: 10px; border-radius: 6px; min-height: 400px;">
 
-            <h3>{{ column }}</h3>
+            <h3 style="text-align: center">{{ taskStatusLabels[column] }}</h3>
 
             @for(task of grouped[column]; track task.id){
             <div cdkDrag (click)="openEditTask(task)"

@@ -19,7 +19,7 @@ import { Task } from '../../core/services/tasks/task-interface';
     CommonModule, MatDialogClose, MatDatepickerModule, MatNativeDateModule],
   providers: [provideNativeDateAdapter()],
   templateUrl: './create-task.html',
-  styleUrl: './create-task.css',
+  styleUrls: ['./create-task.css'],
   standalone: true
 })
 
@@ -27,7 +27,7 @@ import { Task } from '../../core/services/tasks/task-interface';
 
 export class CreateTaskComponent implements OnInit {
 
-  public data = inject<data>(MAT_DIALOG_DATA);
+  public data = inject<CreateTaskDialogData>(MAT_DIALOG_DATA);
 
   ngOnInit(): void {
 
@@ -60,7 +60,7 @@ export class CreateTaskComponent implements OnInit {
   readonly formData = model(this.taskForm);
 
 }
-export interface data {
+export interface CreateTaskDialogData {
   title: string;
   task: Task
   users: Observable<Users[]>

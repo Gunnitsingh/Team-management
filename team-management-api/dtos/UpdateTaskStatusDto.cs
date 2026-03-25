@@ -1,4 +1,4 @@
 public class UpdateTaskStatusDto
 {
-    public string Status { get; set; }
+    public TaskStatus Status { get; set; }
 }

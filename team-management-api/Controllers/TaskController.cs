@@ -30,7 +30,7 @@ public class TasksController : ControllerBase
             ProjectId = dto.ProjectId,
             AssignedTo = dto.AssignedTo,
             DueDate = dto.DueDate,
-            Status = "BACKLOG",
+            Status = TaskStatus.BACKLOG,
             CreatedDate = DateTime.UtcNow
         };
 
@@ -50,16 +50,13 @@ public class TasksController : ControllerBase
         if (task == null)
             return NotFound();
 
-        if (!IsValidStatus(dto.Status))
-        {
-            return BadRequest("Invalid status");
-        }
-
         task.Status = dto.Status;
 
         await _context.SaveChangesAsync();
+         var updatedTask = await GetTaskDtoQuery()
+        .FirstOrDefaultAsync(t => t.Id == id);
 
-        return Ok(task);
+        return Ok(updatedTask);
     }
 
     [HttpPut("{id}")]
@@ -86,12 +83,6 @@ public class TasksController : ControllerBase
         return Ok(updatedTask);
     }
 
-
-    private bool IsValidStatus(string status)
-    {
-        var allowedStatuses = new[] { "BACKLOG", "TODO", "IN_PROGRESS", "REVIEW", "DONE" };
-        return allowedStatuses.Contains(status);
-    }
 
     private IQueryable<TaskDto> GetTaskDtoQuery()
     {

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace team_management_api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260322185416_UpdateStatusToEnum")]
+    partial class UpdateStatusToEnum
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -110,29 +113,6 @@ namespace team_management_api.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Users");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 3,
-                            Email = "sunny@test.com",
-                            Name = "Suuny",
-                            Role = "Developer"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            Email = "john@test.com",
-                            Name = "John",
-                            Role = "Lead"
-                        },
-                        new
-                        {
-                            Id = 4,
-                            Email = "neeti@test.com",
-                            Name = "Neeti",
-                            Role = "Lead"
-                        });
                 });
 
             modelBuilder.Entity("TaskItem", b =>
