@@ -6,10 +6,12 @@ using Microsoft.EntityFrameworkCore;
 public class TasksController : ControllerBase
 {
     private readonly AppDbContext _context;
+    private readonly IMessagePublisher _publisher;
 
-    public TasksController(AppDbContext context)
+    public TasksController(AppDbContext context, IMessagePublisher publisher)
     {
         _context = context;
+        _publisher = publisher;
     }
 
     [HttpGet]
@@ -36,6 +38,15 @@ public class TasksController : ControllerBase
 
         _context.Tasks.Add(task);
         await _context.SaveChangesAsync();
+
+        _publisher.Publish(new TaskEvent
+        {
+            EventType = "TASK_CREATED",
+            TaskId = task.Id,
+            Status = task.Status.ToString(),
+            AssignedTo = task.AssignedTo,
+            Timestamp = DateTime.UtcNow
+        });
         var createdTask = await GetTaskDtoQuery()
         .FirstOrDefaultAsync(t => t.Id == task.Id);
 
@@ -53,6 +64,16 @@ public class TasksController : ControllerBase
         task.Status = dto.Status;
 
         await _context.SaveChangesAsync();
+
+        _publisher.Publish(new TaskEvent
+        {
+            EventType = "TASK_STATUS_UPDATED",
+            TaskId = task.Id,
+            Status = task.Status.ToString(),
+            AssignedTo = task.AssignedTo,
+            Timestamp = DateTime.UtcNow
+        });
+
         var updatedTask = await GetTaskDtoQuery()
        .FirstOrDefaultAsync(t => t.Id == id);
 
@@ -76,6 +97,16 @@ public class TasksController : ControllerBase
 
         await _context.SaveChangesAsync();
 
+
+        _publisher.Publish(new TaskEvent
+        {
+            EventType = "TASK_UPDATED",
+            TaskId = task.Id,
+            Status = task.Status.ToString(),
+            AssignedTo = task.AssignedTo,
+            Timestamp = DateTime.UtcNow
+        });
+
         // Return updated DTO (important)
         var updatedTask = await GetTaskDtoQuery()
             .FirstOrDefaultAsync(t => t.Id == id);
@@ -93,7 +124,14 @@ public class TasksController : ControllerBase
         _context.Tasks.Remove(task);
         await _context.SaveChangesAsync();
 
-        return NoContent(); 
+        _publisher.Publish(new TaskEvent
+        {
+            EventType = "TASK_DELETED",
+            TaskId = task.Id,
+            Timestamp = DateTime.UtcNow
+        });
+
+        return NoContent();
     }
 
 
