@@ -26,4 +26,8 @@ export class TaskService {
   public editTask(id:number,task:CreateTaskInterface){
     return this.http.put<Task>(`${this.baseUrl}/${id}`,task)
   }
+
+  public deleteTask(id:number){
+    return this.http.delete<Task>(`${this.baseUrl}/${id}`)
+  }
 }

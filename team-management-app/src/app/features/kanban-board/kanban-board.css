@@ -1,0 +1,85 @@
+.kanban-container {
+  padding: 1rem;
+}
+
+.kanban-content {
+  width: 100%;
+}
+
+.kanban-title {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.create-task-btn {
+  margin: 0.5rem;
+}
+
+.columns-container {
+  display: flex;
+  gap: 1rem;
+  margin: 0.5rem;
+}
+
+.column {
+  flex: 1;
+  border: 1px solid #ccc;
+  padding: 10px;
+  border-radius: 6px;
+  min-height: 400px;
+  background-color: #fafafa;
+}
+
+.column-title {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.task-card {
+  background: #f5f5f5;
+  margin-bottom: 10px;
+  padding: 8px;
+  border-radius: 4px;
+  background-color: lightskyblue;
+  min-height: 120px;
+  cursor: pointer;
+  transition: box-shadow 0.2s;
+}
+
+.task-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.task-title {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.task-assigned,
+.task-priority,
+.task-description,
+.task-date {
+  font-size: 0.875rem;
+  margin-bottom: 0.25rem;
+  color: #333;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 2rem;
+  color: #999;
+  font-style: italic;
+}
+
+.loading-state {
+  text-align: center;
+  padding: 2rem;
+  font-size: 1.1rem;
+  color: #666;
+}
+
+.delete-button {
+  height: 20px;
+  margin-top: 0.5rem;
+}

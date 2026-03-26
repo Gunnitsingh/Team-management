@@ -1,0 +1,13 @@
+<div class="delete-task-container">
+  <div class="confirmation-dialog">
+    <h2>Delete Task</h2>
+    <p>Are you sure you want to delete {{data.task.id}} task? This action cannot be undone.</p>
+    
+    <div class="dialog-actions">
+        <mat-dialog-actions align="end">
+        <button matButton mat-dialog-close>Cancel</button>
+        <button matButton="filled" [mat-dialog-close]="true" cdkFocusInitial >Delete Task</button>
+    </mat-dialog-actions>
+    </div>
+  </div>
+</div>

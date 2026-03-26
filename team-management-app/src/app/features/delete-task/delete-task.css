@@ -1,0 +1,49 @@
+
+
+.confirmation-dialog {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 32px;
+  max-width: 400px;
+  text-align: center;
+}
+
+.confirmation-dialog h2 {
+  margin-top: 0;
+  margin-bottom: 16px;
+  color: #f44336;
+  font-size: 24px;
+}
+
+.confirmation-dialog p {
+  color: #666;
+  margin-bottom: 32px;
+  line-height: 1.6;
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+
+
+.btn-cancel {
+  background-color: #e0e0e0;
+  color: #333;
+}
+
+.btn-cancel:hover {
+  background-color: #d0d0d0;
+}
+
+.btn-delete {
+  background-color: #f44336;
+  color: white;
+}
+
+.btn-delete:hover {
+  background-color: #da190b;
+}

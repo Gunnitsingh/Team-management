@@ -53,8 +53,8 @@ public class TasksController : ControllerBase
         task.Status = dto.Status;
 
         await _context.SaveChangesAsync();
-         var updatedTask = await GetTaskDtoQuery()
-        .FirstOrDefaultAsync(t => t.Id == id);
+        var updatedTask = await GetTaskDtoQuery()
+       .FirstOrDefaultAsync(t => t.Id == id);
 
         return Ok(updatedTask);
     }
@@ -81,6 +81,19 @@ public class TasksController : ControllerBase
             .FirstOrDefaultAsync(t => t.Id == id);
 
         return Ok(updatedTask);
+    }
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteTask(int id)
+    {
+        var task = await _context.Tasks.FindAsync(id);
+
+        if (task == null)
+            return NotFound();
+
+        _context.Tasks.Remove(task);
+        await _context.SaveChangesAsync();
+
+        return NoContent(); 
     }
 
 
