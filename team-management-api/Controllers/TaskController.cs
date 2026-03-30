@@ -1,8 +1,5 @@
-using System.Text;
-using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using RabbitMQ.Client;
 using Shared.Constants;
 using Shared.Entities;
 
@@ -12,17 +9,19 @@ public class TasksController : ControllerBase
 {
     private readonly AppDbContext _context;
     private readonly IMessagePublisher _publisher;
+    private readonly ITaskService _taskService;
 
-    public TasksController(AppDbContext context, IMessagePublisher publisher)
+    public TasksController(AppDbContext context, IMessagePublisher publisher, ITaskService taskService)
     {
         _context = context;
         _publisher = publisher;
+        _taskService = taskService;
     }
 
     [HttpGet]
     public async Task<IActionResult> GetTasks()
     {
-        var tasks = await GetTaskDtoQuery().ToListAsync();
+        var tasks = await _taskService.GetTaskDtoQuery().ToListAsync();
         return Ok(tasks);
     }
 
@@ -44,7 +43,7 @@ public class TasksController : ControllerBase
         _context.Tasks.Add(task);
         await _context.SaveChangesAsync();
 
-        PublishEvent(StatusEvents.TASK_CREATED, task.Id, "", "Created");
+        _taskService.PublishEvents(StatusEvents.TASK_CREATED, task.Id, "", "Created");
 
 
         return Ok(task);
@@ -62,11 +61,11 @@ public class TasksController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        PublishEvent(StatusEvents.TASK_STATUS_UPDATED, task.Id, oldStatus.ToString(), dto.Status.ToString());
+        _taskService.PublishEvents(StatusEvents.TASK_STATUS_UPDATED, task.Id, oldStatus.ToString(), dto.Status.ToString());
 
-
-        var updatedTask = await GetTaskDtoQuery()
+        var updatedTask = await _taskService.GetTaskDtoQuery()
        .FirstOrDefaultAsync(t => t.Id == id);
+
 
         return Ok(updatedTask);
     }
@@ -79,14 +78,15 @@ public class TasksController : ControllerBase
         if (task == null)
             return NotFound();
 
-        // Capture original values for change detection
-        var originalAssignedTo = task.AssignedTo;
-        var originalTitle = task.Title;
-        var originalDescription = task.Description;
-        var originalPriority = task.Priority;
-        var originalName = task.AssignedToUser;
-        var originalDueDate = task.DueDate;
-
+        TaskSnapshot originalTask = new TaskSnapshot
+        {
+            Title = task.Title,
+            Description = task.Description,
+            Priority = task.Priority,
+            DueDate = task.DueDate,
+            AssignedTo = task.AssignedTo,
+            AssignedToName = task.AssignedToUser?.Name
+        };
         // Update fields
         task.Title = dto.Title;
         task.Description = dto.Description;
@@ -95,29 +95,11 @@ public class TasksController : ControllerBase
         task.DueDate = dto.DueDate;
 
         await _context.SaveChangesAsync();
-
-        // Publish events for changed fields
-
-
-        if (originalTitle != dto.Title)
-            PublishEvent(StatusEvents.TASK_TITLE_UPDATED, task.Id, originalTitle, dto.Title);
-
-        if (originalDescription != dto.Description)
-            PublishEvent(StatusEvents.TASK_DESCRIPTION_UPDATED, task.Id, originalDescription, dto.Description);
-
-        if (originalPriority != dto.Priority)
-            PublishEvent(StatusEvents.TASK_PRIORITY_UPDATED, task.Id, originalPriority.ToString(), dto.Priority.ToString());
-
-        if (originalDueDate != dto.DueDate)
-            PublishEvent(StatusEvents.TASK_DUE_DATE_UPDATED, task.Id, originalDueDate?.ToString() ?? null, dto.DueDate?.ToString() ?? null);
-
         // Return updated DTO
-        var updatedTask = await GetTaskDtoQuery()
-            .FirstOrDefaultAsync(t => t.Id == id);
+        var updatedTask = await _taskService.GetTaskDtoQuery()
+            .FirstAsync(t => t.Id == id);
 
-        if (originalAssignedTo != dto.AssignedTo)
-            PublishEvent(StatusEvents.TASK_ASSIGNED, task.Id, originalName.ToString(), updatedTask.AssignedToName);
-
+        _taskService.PublishUpdateEvents(originalTask, dto, updatedTask);
         return Ok(updatedTask);
     }
     [HttpDelete("{id}")]
@@ -130,39 +112,9 @@ public class TasksController : ControllerBase
 
         _context.Tasks.Remove(task);
         await _context.SaveChangesAsync();
-
-        PublishEvent(StatusEvents.TASK_DELETED, task.Id, "", "Deleted");
+        _taskService.PublishEvents(StatusEvents.TASK_DELETED, task.Id, task.Title, "");
 
         return NoContent();
     }
 
-
-    private IQueryable<TaskDto> GetTaskDtoQuery()
-    {
-        return _context.Tasks
-            .Select(t => new TaskDto
-            {
-                Id = t.Id,
-                Title = t.Title,
-                Status = t.Status,
-                Priority = t.Priority,
-                AssignedToId = t.AssignedTo,
-                AssignedToName = t.AssignedToUser != null ? t.AssignedToUser.Name : null,
-                CreatedDate = t.CreatedDate,
-                Description = t.Description,
-                DueDate = t.DueDate
-            });
-    }
-
-    private void PublishEvent(string eventType, int taskId, string oldValue, string newValue)
-    {
-        _publisher.Publish(new TaskEvent
-        {
-            EventType = eventType,
-            TaskId = taskId,
-            OldValue = oldValue ?? null,
-            NewValue = newValue,
-            Timestamp = DateTime.UtcNow
-        });
-    }
 }

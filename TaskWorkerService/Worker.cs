@@ -67,7 +67,7 @@ public class Worker : BackgroundService
     {
         var consumer = new EventingBasicConsumer(_channel);
 
-        consumer.Received += (model, ea) =>
+        consumer.Received += async (model, ea) =>
         {
             int retryCount = 0;
 
@@ -105,7 +105,7 @@ public class Worker : BackgroundService
                 // 🧪 Force failure for testing (remove later)
                 // throw new Exception("Test retry");
 
-                HandleEvent(taskEvent);
+               await HandleEvent(taskEvent);
 
                 // ✅ Success → ACK
                 _channel.BasicAck(ea.DeliveryTag, false);

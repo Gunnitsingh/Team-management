@@ -20,14 +20,27 @@ export class TaskService {
   }
 
   public createTask(task:CreateTaskInterface){
-    return this.http.post<Task>(this.baseUrl,task)
+    return this.http.post<Task>(this.baseUrl, this.normalizeDueDate(task))
   }
 
   public editTask(id:number,task:CreateTaskInterface){
-    return this.http.put<Task>(`${this.baseUrl}/${id}`,task)
+    return this.http.put<Task>(`${this.baseUrl}/${id}`, this.normalizeDueDate(task))
   }
 
   public deleteTask(id:number){
     return this.http.delete<Task>(`${this.baseUrl}/${id}`)
+  }
+
+  private normalizeDueDate(task: CreateTaskInterface): CreateTaskInterface {
+    if (!task.dueDate) return task;
+    
+    const date = new Date(task.dueDate);
+    // Convert local date to UTC to prevent timezone offset issues
+    const utcDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    
+    return {
+      ...task,
+      dueDate: utcDate
+    };
   }
 }
