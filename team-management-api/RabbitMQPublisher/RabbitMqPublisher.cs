@@ -1,4 +1,6 @@
 using RabbitMQ.Client;
+using Shared.Constants;
+using Shared.Entities;
 using System.Text;
 using System.Text.Json;
 
@@ -17,13 +19,6 @@ public class RabbitMqPublisher : IMessagePublisher
         _connection = factory.CreateConnection();
         _channel = _connection.CreateModel();
 
-        _channel.QueueDeclare(
-            queue: "task-events",
-            durable: false,
-            exclusive: false,
-            autoDelete: false,
-            arguments: null
-        );
     }
 
     public void Publish(TaskEvent taskEvent)
@@ -32,11 +27,13 @@ public class RabbitMqPublisher : IMessagePublisher
         {
             var message = JsonSerializer.Serialize(taskEvent);
             var body = Encoding.UTF8.GetBytes(message);
+            var properties = _channel.CreateBasicProperties();
+            properties.Persistent = true;
 
             _channel.BasicPublish(
                 exchange: "",
-                routingKey: "task-events",
-                basicProperties: null,
+                routingKey: MqEvents.TASK_EVENTS,
+                basicProperties: properties,
                 body: body
             );
         }

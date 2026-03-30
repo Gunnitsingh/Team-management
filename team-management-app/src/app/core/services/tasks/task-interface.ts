@@ -4,7 +4,7 @@ export interface Task {
   status: string;
   priority: string;
   description: string;
-  assignedToId : number;
+  assignedToId : number | null;
   assignedToName?: string;
   dueDate : Date
 }

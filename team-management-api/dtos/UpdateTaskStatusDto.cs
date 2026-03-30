@@ -1,4 +1,4 @@
 public class UpdateTaskStatusDto
 {
-    public TaskStatus Status { get; set; }
+    public Shared.Enums.TaskStatus Status { get; set; }
 }
