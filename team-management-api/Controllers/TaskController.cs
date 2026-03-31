@@ -25,6 +25,13 @@ public class TasksController : ControllerBase
         return Ok(tasks);
     }
 
+     [HttpGet("{id}/activities")]
+    public async Task<IActionResult> GetTasksActivities(int id)
+    {
+        var tasks = await _taskService.GetTaskActivities(id).ToListAsync();
+        return Ok(tasks);
+    }
+
     [HttpPost]
     public async Task<IActionResult> CreateTask([FromBody] CreateTaskDto dto)
     {
@@ -110,9 +117,11 @@ public class TasksController : ControllerBase
         if (task == null)
             return NotFound();
 
-        _context.Tasks.Remove(task);
+        task.IsDeleted = true;
+        task.DeletedBy = 1; // Replace with actual user ID from auth context
+        task.DeletedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
-        _taskService.PublishEvents(StatusEvents.TASK_DELETED, task.Id, task.Title, "");
+        _taskService.PublishEvents(StatusEvents.TASK_DELETED, task.Id, task.DeletedAt.ToString(), task.DeletedBy.ToString());
 
         return NoContent();
     }

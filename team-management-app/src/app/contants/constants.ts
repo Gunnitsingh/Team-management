@@ -5,14 +5,6 @@ export const environment = {
   apiUrl: 'https://localhost:5001/api',
 };
 
-export enum KanbanColumn {
-  BACKLOG = 'BACKLOG',
-  TODO = 'TODO',
-  IN_PROGRESS = 'IN_PROGRESS',
-  REVIEW = 'REVIEW',
-  DONE = 'DONE'
-}
-
 export enum TaskStatus {
   BACKLOG = 'BACKLOG',
   TODO = 'TODO',

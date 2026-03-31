@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Shared.Constants;
 using Shared.Entities;
 
@@ -29,6 +30,13 @@ public class TaskService : ITaskService
             });
     }
 
+    public IQueryable<TaskActivity> GetTaskActivities(int taskId)
+    {
+        return _context.TaskActivities
+            .Where(t => t.TaskId == taskId);
+    }
+
+
     public void PublishUpdateEvents(TaskSnapshot task, UpdateTaskDto dto, TaskDto updatedTask)
     {
         var originalAssignedTo = task.AssignedTo;
@@ -37,29 +45,30 @@ public class TaskService : ITaskService
         var originalPriority = task.Priority;
         var originalName = task.AssignedToName;
         var originalDueDate = task.DueDate;
+        var correlationId = Guid.NewGuid().ToString();
 
         if (originalTitle != dto.Title)
-            Publish(StatusEvents.TASK_TITLE_UPDATED, updatedTask.Id, originalTitle ?? "", dto.Title ?? "");
+            Publish(StatusEvents.TASK_TITLE_UPDATED, updatedTask.Id, originalTitle ?? "", dto.Title ?? "", correlationId);
 
         if (originalDescription != dto.Description)
-            Publish(StatusEvents.TASK_DESCRIPTION_UPDATED, updatedTask.Id, originalDescription ?? "", dto.Description ?? "");
+            Publish(StatusEvents.TASK_DESCRIPTION_UPDATED, updatedTask.Id, originalDescription ?? "", dto.Description ?? "", correlationId);
 
         if (originalPriority != dto.Priority)
-            Publish(StatusEvents.TASK_PRIORITY_UPDATED, updatedTask.Id, originalPriority.ToString(), dto.Priority.ToString());
+            Publish(StatusEvents.TASK_PRIORITY_UPDATED, updatedTask.Id, originalPriority.ToString(), dto.Priority.ToString(), correlationId);
 
         if (originalDueDate != dto.DueDate)
-            Publish(StatusEvents.TASK_DUE_DATE_UPDATED, updatedTask.Id, originalDueDate?.ToString() ?? "", dto.DueDate?.ToString() ?? "");
+            Publish(StatusEvents.TASK_DUE_DATE_UPDATED, updatedTask.Id, originalDueDate?.ToString() ?? "", dto.DueDate?.ToString() ?? "", correlationId);
 
         if (originalAssignedTo != dto.AssignedTo)
-            Publish(StatusEvents.TASK_ASSIGNED, updatedTask.Id, originalName?.ToString() ?? "", updatedTask.AssignedToName ?? "");
+            Publish(StatusEvents.TASK_ASSIGNED, updatedTask.Id, originalName?.ToString() ?? "", updatedTask.AssignedToName ?? "", correlationId);
     }
 
     public void PublishEvents(string eventType, int taskId, string oldValue = "", string newValue = "")
     {
-        Publish(eventType, taskId, oldValue, newValue);
+        Publish(eventType, taskId, oldValue, newValue, Guid.NewGuid().ToString());
     }
 
-    private void Publish(string eventType, int taskId, string oldValue, string newValue)
+    private void Publish(string eventType, int taskId, string oldValue, string newValue, string correlationId)
     {
         var taskEvent = new TaskEvent
         {
@@ -67,7 +76,8 @@ public class TaskService : ITaskService
             TaskId = taskId,
             OldValue = oldValue,
             NewValue = newValue,
-            Timestamp = DateTime.UtcNow
+            Timestamp = DateTime.UtcNow,
+            CorrelationId = correlationId
         };
         _publisher.Publish(taskEvent);
     }

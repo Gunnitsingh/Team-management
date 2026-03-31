@@ -26,6 +26,9 @@ public class AppDbContext : DbContext
             .WithMany()
             .HasForeignKey(t => t.AssignedTo)
             .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<TaskItem>()
+.HasQueryFilter(t => !t.IsDeleted);
     }
 }
 

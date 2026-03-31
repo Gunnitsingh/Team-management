@@ -7,5 +7,7 @@ namespace Shared.Entities
         public string EventType { get; set; } = null!;
         public string Description { get; set; } = null!;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        public string CorrelationId { get; set; } = null!;
     }
 }

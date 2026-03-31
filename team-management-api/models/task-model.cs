@@ -11,6 +11,9 @@ public class TaskItem
     public User? AssignedToUser { get; set; } 
 
     public int ProjectId { get; set; }
+    public bool IsDeleted { get; set; }
+    public int DeletedBy { get; set; }
+    public DateTime DeletedAt { get; set; }
     public DateTime CreatedDate { get; set; }
     public DateTime? DueDate { get; set; }
 }

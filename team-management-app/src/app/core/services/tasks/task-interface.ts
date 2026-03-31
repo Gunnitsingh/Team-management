@@ -17,3 +17,12 @@ export interface CreateTaskInterface {
   title: string
   dueDate : Date
 }
+
+export interface  TaskActivity {
+  id: number;
+  taskId: number;
+  description: string;
+  eventType: string;
+  newValue: string;
+  createdAt: Date;
+}

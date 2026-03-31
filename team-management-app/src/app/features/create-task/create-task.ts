@@ -11,11 +11,12 @@ import { CommonModule } from '@angular/common';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule, provideNativeDateAdapter } from '@angular/material/core';
 import { Task } from '../../core/services/tasks/task-interface';
+import { AuditTrailComponent } from '../audit-trail/audit-trail';
 
 @Component({
   selector: 'app-create-task',
   imports: [ReactiveFormsModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatButtonModule, MatDialogModule,
-    CommonModule, MatDialogClose, MatDatepickerModule, MatNativeDateModule],
+    CommonModule, MatDialogClose, MatDatepickerModule, MatNativeDateModule, AuditTrailComponent],
   providers: [provideNativeDateAdapter()],
   templateUrl: './create-task.html',
   styleUrls: ['./create-task.css'],
@@ -41,10 +42,6 @@ export class CreateTaskComponent implements OnInit {
         dueDate: task.dueDate
       });
     }
-
-    this.taskForm.valueChanges.subscribe((value) => {
-      console.log(value)
-    })
   }
   private readonly formBuilder = inject(FormBuilder);
   public priorities = ["Low", "Medium", "High", "Critical", "Blocker"]

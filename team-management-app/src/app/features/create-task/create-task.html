@@ -19,7 +19,7 @@
 
             <mat-label>Priority</mat-label>
             <mat-select [formControlName]="'priority'">
-                @for (priority of priorities; track priorities) {
+                @for (priority of priorities; track priority) {
                 <mat-option [value]="priority">{{priority}}</mat-option>
                 }
             </mat-select>
@@ -52,3 +52,7 @@
     </mat-dialog-actions>
 
 </form>
+
+@if(data.title === 'Update') {  
+<app-audit-trail [taskId]="data.task.id"></app-audit-trail>
+}

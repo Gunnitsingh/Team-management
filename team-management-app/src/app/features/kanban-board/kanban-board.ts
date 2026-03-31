@@ -36,8 +36,9 @@ export class KanbanBoard implements OnInit {
   
   private readonly dialogConfig = {
     minHeight: '400px',
-    maxHeight: '100%',
-    width: '600px'
+    maxHeight: '60vh',
+    minWidth: '60vw',
+    maxWidth: 'fit-content',
   };
 
   public tasksByStatus$: Observable<Record<string, Task[]>> = this.tasksSubject.pipe(
@@ -51,6 +52,8 @@ export class KanbanBoard implements OnInit {
     this.taskService.getTasks().pipe(take(1)).subscribe(tasks => {
       this.tasksSubject.next(tasks);
     });
+
+
   }
 
   public drop(event: CdkDragDrop<any[]>) {
@@ -109,6 +112,9 @@ export class KanbanBoard implements OnInit {
   }
 
   public openEditTask(editTask: Task) {
+    this.taskService.getTaskActivities(editTask.id).pipe(take(1)).subscribe(activities => {
+      console.log('Task activities:', activities);
+    });
     const dialogRef = this.dialog.open(CreateTaskComponent, {
       ...this.dialogConfig,
       data: { title: 'Update', users: this.users$, task: editTask },

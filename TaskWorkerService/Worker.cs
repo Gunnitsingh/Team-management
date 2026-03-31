@@ -175,7 +175,8 @@ public class Worker : BackgroundService
             TaskId = taskEvent.TaskId,
             EventType = taskEvent.EventType,
             Description = description,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            CorrelationId = taskEvent.CorrelationId
         };
 
         context.TaskActivities.Add(activity);
@@ -193,7 +194,7 @@ public class Worker : BackgroundService
             StatusEvents.TASK_PRIORITY_UPDATED => $"Priority changed from '{taskEvent.OldValue}' to '{taskEvent.NewValue}'",
             StatusEvents.TASK_DESCRIPTION_UPDATED => $"Description updated from '{taskEvent.OldValue}' to '{taskEvent.NewValue}'",
             StatusEvents.TASK_DUE_DATE_UPDATED => $"Due date changed from '{taskEvent.OldValue}' to '{taskEvent.NewValue}'",
-            StatusEvents.TASK_DELETED => "Task deleted",
+            StatusEvents.TASK_DELETED => "Task deleted by user ID " + taskEvent.NewValue + " at " + taskEvent.OldValue,
             _ => taskEvent.EventType
         };
     }

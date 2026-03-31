@@ -12,5 +12,6 @@ namespace Shared.Entities
 
     public int? AssignedTo { get; set; }
     public DateTime Timestamp { get; set; }
+    public string CorrelationId { get; set; }
 } 
 }

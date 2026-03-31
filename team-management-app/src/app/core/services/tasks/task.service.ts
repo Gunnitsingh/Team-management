@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { CreateTaskInterface, Task } from './task-interface';
+import { CreateTaskInterface, Task, TaskActivity } from './task-interface';
 import { Observable } from 'rxjs';
 import { environment } from '../../../contants/constants';
 
@@ -25,6 +25,10 @@ export class TaskService {
 
   public editTask(id:number,task:CreateTaskInterface){
     return this.http.put<Task>(`${this.baseUrl}/${id}`, this.normalizeDueDate(task))
+  }
+
+   public getTaskActivities(id:number){
+    return this.http.get<TaskActivity[]>(`${this.baseUrl}/${id}/activities`)
   }
 
   public deleteTask(id:number){
