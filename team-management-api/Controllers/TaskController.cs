@@ -25,11 +25,26 @@ public class TasksController : ControllerBase
         return Ok(tasks);
     }
 
-     [HttpGet("{id}/activities")]
+    [HttpGet("{id}/activities")]
     public async Task<IActionResult> GetTasksActivities(int id)
     {
         var tasks = await _taskService.GetTaskActivities(id).ToListAsync();
-        return Ok(tasks);
+        var groupedLogs = tasks
+    .GroupBy(x => x.CorrelationId)
+    .Select(g => new
+    {
+        CorrelationId = g.Key,
+        ChangedByName = g.First().ChangedByName,
+        Timestamp = g.First().CreatedAt,
+        Changes = g.Select(x => new
+        {
+            x.Description,
+            x.EventType
+        })
+    })
+    .OrderByDescending(x => x.Timestamp)
+    .ToList();
+        return Ok(groupedLogs);
     }
 
     [HttpPost]
@@ -51,9 +66,10 @@ public class TasksController : ControllerBase
         await _context.SaveChangesAsync();
 
         _taskService.PublishEvents(StatusEvents.TASK_CREATED, task.Id, "", "Created");
+        var updatedTask = await _taskService.GetTaskDtoQuery()
+            .FirstOrDefaultAsync(t => t.Id == task.Id);
 
-
-        return Ok(task);
+        return Ok(updatedTask);
     }
     [HttpPut("{id}/status")]
     public async Task<IActionResult> UpdateTaskStatus(int id, UpdateTaskStatusDto dto)
@@ -118,7 +134,7 @@ public class TasksController : ControllerBase
             return NotFound();
 
         task.IsDeleted = true;
-        task.DeletedBy = 1; // Replace with actual user ID from auth context
+        task.DeletedBy = _taskService.GetCurrentUserId();
         task.DeletedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
         _taskService.PublishEvents(StatusEvents.TASK_DELETED, task.Id, task.DeletedAt.ToString(), task.DeletedBy.ToString());

@@ -8,7 +8,7 @@ public class TaskItem
 
     public int? AssignedTo { get; set; }
 
-    public User? AssignedToUser { get; set; } 
+    public User? AssignedToUser { get; set; }
 
     public int ProjectId { get; set; }
     public bool IsDeleted { get; set; }

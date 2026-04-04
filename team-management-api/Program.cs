@@ -12,6 +12,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton<IMessagePublisher, RabbitMqPublisher>();
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ITaskService, TaskService>();
 builder.Services.AddCors(options =>
 {
@@ -59,12 +60,12 @@ app.UseHttpsRedirection();
 app.UseCors("AllowAll"); // 👈 MUST be before MapControllers
 
 app.UseAuthorization();
-
 app.UseSwagger();
 app.UseSwaggerUI();
 
 app.MapControllers();
 
+app.UseMiddleware<TaskMiddleware>();
 app.Run();
 
 record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)

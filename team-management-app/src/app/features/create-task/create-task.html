@@ -37,7 +37,7 @@
     <div>
         <mat-form-field>
             <mat-label>Due Date</mat-label>
-            <input matInput [matDatepicker]="picker" formControlName="dueDate"> 
+            <input matInput [matDatepicker]="picker" formControlName="dueDate">
             <mat-hint>MM/DD/YYYY</mat-hint>
             <mat-datepicker-toggle matIconSuffix [for]="picker">
             </mat-datepicker-toggle>
@@ -47,12 +47,13 @@
     </div>
     <mat-dialog-actions align="end">
         <button matButton mat-dialog-close>Cancel</button>
-        <button matButton [mat-dialog-close]="formData().value" cdkFocusInitial [disabled]="!taskForm.valid">{{data.title }}
+        <button matButton [mat-dialog-close]="formData().value" cdkFocusInitial
+            [disabled]="!taskForm.valid">{{data.title }}
             Task</button>
     </mat-dialog-actions>
 
 </form>
 
-@if(data.title === 'Update') {  
+@if(data.title === 'Update') {
 <app-audit-trail [taskId]="data.task.id"></app-audit-trail>
 }

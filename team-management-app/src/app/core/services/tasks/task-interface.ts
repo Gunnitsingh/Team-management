@@ -26,3 +26,15 @@ export interface  TaskActivity {
   newValue: string;
   createdAt: Date;
 }
+
+export interface AuditGroup {
+  correlationId: string;
+  changedByName: string;
+  timestamp: string;
+  changes: AuditChange[];
+}
+
+interface AuditChange {
+  description: string;
+  eventType: string;
+}

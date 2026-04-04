@@ -1,18 +1,23 @@
 <div class="timeline">
-   
+
   <div *ngFor="let activity of taskActivities$ | async" class="timeline-item">
-    
-    <div class="timeline-icon">
-      <mat-icon>{{ getIcon(activity.eventType) }}</mat-icon>
-    </div>
+
+
 
     <div class="timeline-content">
       <div class="description">
-        {{ activity.description }}
+        Updated By {{ activity.changedByName }}
+      </div>
+      <div *ngFor="let change of activity.changes">
+        <div class="timeline-icon">
+          <mat-icon>{{ getIcon(change.eventType) }}</mat-icon>
+        </div>
+        <div class="description">{{ change.description }}</div>
+
       </div>
 
       <div class="time">
-        {{ activity.createdAt | date:'medium' }}
+        {{ activity.timestamp | date:'medium' }}
       </div>
     </div>
 

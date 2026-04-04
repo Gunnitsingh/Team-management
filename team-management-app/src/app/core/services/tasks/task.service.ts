@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { CreateTaskInterface, Task, TaskActivity } from './task-interface';
+import { AuditGroup, CreateTaskInterface, Task, TaskActivity } from './task-interface';
 import { Observable } from 'rxjs';
 import { environment } from '../../../contants/constants';
 
@@ -10,25 +10,29 @@ import { environment } from '../../../contants/constants';
 export class TaskService {
   private baseUrl = environment.apiUrl + '/tasks';
   private readonly http = inject(HttpClient);
+  private readonly headers = {
+  'X-User-Id': '1',
+  'X-User-Name': 'Guneet Singh'
+};
 
   public getTasks(): Observable<Task[]> {
-    return this.http.get<Task[]>(this.baseUrl);
+    return this.http.get<Task[]>( this.baseUrl);
   }
 
   public updateTaskStatus(id: number, status: string): Observable<Task> {
-    return this.http.put<Task>(`${this.baseUrl}/${id}/status`, { status });
+    return this.http.put<Task>(`${this.baseUrl}/${id}/status`, { status }, {headers: this.headers});
   }
 
   public createTask(task:CreateTaskInterface){
-    return this.http.post<Task>(this.baseUrl, this.normalizeDueDate(task))
+    return this.http.post<Task>(this.baseUrl, this.normalizeDueDate(task), {headers: this.headers})
   }
 
   public editTask(id:number,task:CreateTaskInterface){
-    return this.http.put<Task>(`${this.baseUrl}/${id}`, this.normalizeDueDate(task))
+    return this.http.put<Task>(`${this.baseUrl}/${id}`, this.normalizeDueDate(task), {headers: this.headers})
   }
 
    public getTaskActivities(id:number){
-    return this.http.get<TaskActivity[]>(`${this.baseUrl}/${id}/activities`)
+    return this.http.get<AuditGroup[]>(`${this.baseUrl}/${id}/activities`)
   }
 
   public deleteTask(id:number){

@@ -28,7 +28,7 @@ import { AuditTrailComponent } from '../audit-trail/audit-trail';
 export class CreateTaskComponent implements OnInit {
 
   public data = inject<CreateTaskDialogData>(MAT_DIALOG_DATA);
-   
+
   ngOnInit(): void {
 
 
@@ -50,7 +50,7 @@ export class CreateTaskComponent implements OnInit {
     title: ['', Validators.required],
     description: ['', Validators.required],
     priority: ['Low'],
-    assignedTo : new FormControl<number | null>(null),
+    assignedTo: new FormControl<number | null>(null),
     dueDate: [new Date()],
   });
   readonly formData = model(this.taskForm);

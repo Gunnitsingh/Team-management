@@ -1,17 +1,17 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { AuditTrail } from './audit-trail';
+import { AuditTrailComponent } from './audit-trail';
 
 describe('AuditTrail', () => {
-  let component: AuditTrail;
-  let fixture: ComponentFixture<AuditTrail>;
+  let component: AuditTrailComponent;
+  let fixture: ComponentFixture<AuditTrailComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [AuditTrail],
+      imports: [AuditTrailComponent],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(AuditTrail);
+    fixture = TestBed.createComponent(AuditTrailComponent);
     component = fixture.componentInstance;
     await fixture.whenStable();
   });

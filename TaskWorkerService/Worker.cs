@@ -176,7 +176,9 @@ public class Worker : BackgroundService
             EventType = taskEvent.EventType,
             Description = description,
             CreatedAt = DateTime.UtcNow,
-            CorrelationId = taskEvent.CorrelationId
+            CorrelationId = taskEvent.CorrelationId,
+            ChangedBy = taskEvent.ChangedBy,
+            ChangedByName = taskEvent.ChangedByName
         };
 
         context.TaskActivities.Add(activity);
