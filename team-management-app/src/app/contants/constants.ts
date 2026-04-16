@@ -2,7 +2,7 @@ export const kanbanColumns = ['BACKLOG', 'TODO', 'IN PROGRESS', 'REVIEW', 'DONE'
 
 export const environment = {
   production: false,
-  apiUrl: 'https://localhost:5001/api',
+  apiUrl: 'http://localhost:8080/api',
 };
 
 export enum TaskStatus {

@@ -1,0 +1,49 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: team-management-api/Dockerfile
+    image: team-management-api:latest
+    ports:
+      - "8080:80"
+    environment:
+      RabbitMq__HostName: rabbitmq
+      RabbitMq__Port: 5672
+      ConnectionStrings__DefaultConnection: Server=sqlserver,1433;Database=TeamManagementDb;User Id=sa;Password=YourStrong@123;TrustServerCertificate=True;
+    depends_on:
+      - rabbitmq
+      - sqlserver
+
+  worker:
+    build:
+      context: .
+      dockerfile: TaskWorkerService/Dockerfile
+    image: task-worker-service:latest
+    environment:
+      RabbitMq__HostName: rabbitmq
+      RabbitMq__Port: 5672
+      NotificationApi__BaseUrl: http://api
+      ConnectionStrings__DefaultConnection: Server=sqlserver,1433;Database=TeamManagementDb;User Id=sa;Password=YourStrong@123;TrustServerCertificate=True;
+    depends_on:
+      - api
+      - rabbitmq
+      - sqlserver
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "YourStrong@123"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+
+volumes:
+  sqlserver-data:

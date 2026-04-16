@@ -32,11 +32,11 @@ export class TaskService {
   }
 
   public getTaskActivities(id: number) {
-    return this.http.get<AuditGroup[]>(`${this.baseUrl}/${id}/activities`)
+    return this.http.get<AuditGroup[]>(`${this.baseUrl}/${id}/activities`, { headers: this.headers })
   }
 
   public deleteTask(id: number) {
-    return this.http.delete<Task>(`${this.baseUrl}/${id}`)
+    return this.http.delete<Task>(`${this.baseUrl}/${id}`, { headers: this.headers })
   }
 
   private normalizeDueDate(task: CreateTaskInterface): CreateTaskInterface {

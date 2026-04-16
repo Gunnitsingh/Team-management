@@ -14,13 +14,15 @@ import { Users } from '../../core/services/users/users.interface';
 import { UsersService } from '../../core/services/users/users';
 import { MatIconModule } from '@angular/material/icon';
 import { DeleteTask } from '../delete-task/delete-task';
+import { NotificationService } from '../../core/services/notification/notification';
 
 @Component({
   selector: 'app-kanban-board',
   imports: [CommonModule, DragDropModule, MatButtonModule, MatDialogModule, MatIconModule, MatSnackBarModule],
   templateUrl: './kanban-board.html',
   styleUrls: ['./kanban-board.css'],
-  standalone: true
+  standalone: true,
+  providers: [NotificationService]
 })
 export class KanbanBoard implements OnInit {
   private readonly taskService = inject(TaskService);
@@ -28,12 +30,13 @@ export class KanbanBoard implements OnInit {
   private readonly userService = inject(UsersService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly destroyRef = inject(DestroyRef);
-  
+  private readonly notificationService = inject(NotificationService);
+
   public readonly columns = Object.values(TaskStatus);
   public users$: Observable<Users[]> = this.userService.getAllUsers();
   private tasksSubject = new BehaviorSubject<Task[]>([]);
   public taskStatusLabels = TASK_STATUS_LABELS;
-  
+
   private readonly dialogConfig = {
     minHeight: '400px',
     maxHeight: '60vh',
@@ -52,7 +55,7 @@ export class KanbanBoard implements OnInit {
     this.taskService.getTasks().pipe(take(1)).subscribe(tasks => {
       this.tasksSubject.next(tasks);
     });
-
+    this.notificationService.start();
 
   }
 
@@ -79,7 +82,6 @@ export class KanbanBoard implements OnInit {
         error: () => {
           // rollback if API fails
           this.tasksSubject.next(tasks);
-          this.snackBar.open('Failed to update task status', 'Close', { duration: 3000 });
         }
       });
   }
@@ -99,7 +101,6 @@ export class KanbanBoard implements OnInit {
             createdTask
           ];
           this.tasksSubject.next(updatedTasks);
-          this.snackBar.open('Task created successfully', 'Close', { duration: 2000 });
         }),
         takeUntilDestroyed(this.destroyRef)
       )
@@ -113,7 +114,6 @@ export class KanbanBoard implements OnInit {
 
   public openEditTask(editTask: Task) {
     this.taskService.getTaskActivities(editTask.id).pipe(take(1)).subscribe(activities => {
-      console.log('Task activities:', activities);
     });
     const dialogRef = this.dialog.open(CreateTaskComponent, {
       ...this.dialogConfig,
@@ -129,7 +129,6 @@ export class KanbanBoard implements OnInit {
             task.id === updatedTask.id ? updatedTask : task
           );
           this.tasksSubject.next(updated);
-          this.snackBar.open('Task updated successfully', 'Close', { duration: 2000 });
         }),
         takeUntilDestroyed(this.destroyRef)
       )
@@ -155,7 +154,6 @@ export class KanbanBoard implements OnInit {
             .filter(t => t.id !== task.id);
 
           this.tasksSubject.next(updated);
-          this.snackBar.open('Task deleted successfully', 'Close', { duration: 2000 });
         }),
         takeUntilDestroyed(this.destroyRef)
       )

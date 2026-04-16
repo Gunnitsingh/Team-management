@@ -6,28 +6,32 @@ using System.Text.Json;
 
 public class RabbitMqPublisher : IMessagePublisher
 {
-    private readonly IConnection _connection;
-    private readonly IModel _channel;
+    private readonly ConnectionFactory _factory;
+    private IConnection? _connection;
+    private IModel? _channel;
 
-    public RabbitMqPublisher()
+    public RabbitMqPublisher(IConfiguration configuration)
     {
-        var factory = new ConnectionFactory()
+        var hostName = configuration["RabbitMq:HostName"] ?? "localhost";
+        var portValue = configuration["RabbitMq:Port"];
+        var port = int.TryParse(portValue, out var parsedPort) ? parsedPort : AmqpTcpEndpoint.UseDefaultPort;
+
+        _factory = new ConnectionFactory()
         {
-            HostName = "localhost"
+            HostName = hostName,
+            Port = port
         };
-
-        _connection = factory.CreateConnection();
-        _channel = _connection.CreateModel();
-
     }
 
     public void Publish(TaskEvent taskEvent)
     {
         try
         {
+            EnsureConnected();
+
             var message = JsonSerializer.Serialize(taskEvent);
             var body = Encoding.UTF8.GetBytes(message);
-            var properties = _channel.CreateBasicProperties();
+            var properties = _channel!.CreateBasicProperties();
             properties.Persistent = true;
 
             _channel.BasicPublish(
@@ -41,5 +45,19 @@ public class RabbitMqPublisher : IMessagePublisher
         {
             Console.WriteLine($"RabbitMQ publish failed: {ex.Message}");
         }
+    }
+
+    private void EnsureConnected()
+    {
+        if (_connection is { IsOpen: true } && _channel is { IsOpen: true })
+        {
+            return;
+        }
+
+        _connection?.Dispose();
+        _channel?.Dispose();
+
+        _connection = _factory.CreateConnection();
+        _channel = _connection.CreateModel();
     }
 }

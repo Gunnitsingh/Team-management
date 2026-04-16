@@ -1,4 +1,5 @@
 using System.Diagnostics.Eventing.Reader;
+using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using RabbitMQ.Client;
@@ -11,26 +12,42 @@ public class Worker : BackgroundService
     private IConnection _connection;
     private IModel _channel;
     private readonly IServiceProvider _serviceProvider;
-
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly string _notificationApiBaseUrl;
+    private readonly ConnectionFactory _rabbitMqFactory;
 
-    public Worker(IServiceScopeFactory scopeFactory, IServiceProvider serviceProvider)
+    public Worker(
+        IServiceScopeFactory scopeFactory,
+        IServiceProvider serviceProvider,
+        IHttpClientFactory httpClientFactory,
+        IConfiguration configuration)
     {
         _scopeFactory = scopeFactory;
         _serviceProvider = serviceProvider;
+        _httpClientFactory = httpClientFactory;
+        _notificationApiBaseUrl = (configuration["NotificationApi:BaseUrl"] ?? "https://localhost:5001").TrimEnd('/');
 
-        var factory = new ConnectionFactory()
+        var rabbitMqHost = configuration["RabbitMq:HostName"] ?? "localhost";
+        var rabbitMqPortValue = configuration["RabbitMq:Port"];
+        var rabbitMqPort = int.TryParse(rabbitMqPortValue, out var parsedPort) ? parsedPort : AmqpTcpEndpoint.UseDefaultPort;
+
+        _rabbitMqFactory = new ConnectionFactory()
         {
-            HostName = "localhost"
+            HostName = rabbitMqHost,
+            Port = rabbitMqPort
         };
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        await EnsureRabbitMqReady(stoppingToken);
+
         var args = new Dictionary<string, object>
 {
     { "x-dead-letter-exchange", "" },
     { "x-dead-letter-routing-key", "task-events-retry" }
 };
-
-        _connection = factory.CreateConnection();
-        _channel = _connection.CreateModel();
 
         _channel.QueueDeclare(
             queue: MqEvents.TASK_EVENTS,
@@ -60,11 +77,6 @@ public class Worker : BackgroundService
             autoDelete: false,
             arguments: null
         );
-
-    }
-
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
-    {
         var consumer = new EventingBasicConsumer(_channel);
 
         consumer.Received += async (model, ea) =>
@@ -104,8 +116,17 @@ public class Worker : BackgroundService
 
                 // 🧪 Force failure for testing (remove later)
                 // throw new Exception("Test retry");
+                Console.WriteLine("📥 Event received from RabbitMQ");
+                await HandleEvent(taskEvent);
+                var notification = new Notification
+                {
+                    UserId = taskEvent.ChangedBy.ToString() ?? "1",
+                    Title = taskEvent.EventType,
+                    Message = $"Task ID: {taskEvent.TaskId} by {taskEvent.ChangedByName}",
+                    CreatedAt = DateTime.UtcNow
+                };
 
-               await HandleEvent(taskEvent);
+                await SaveNotification(notification);
 
                 // ✅ Success → ACK
                 _channel.BasicAck(ea.DeliveryTag, false);
@@ -160,7 +181,25 @@ public class Worker : BackgroundService
             consumer: consumer
         );
 
-        return Task.CompletedTask;
+        await Task.Delay(Timeout.Infinite, stoppingToken);
+    }
+
+    private async Task EnsureRabbitMqReady(CancellationToken stoppingToken)
+    {
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                _connection = _rabbitMqFactory.CreateConnection();
+                _channel = _connection.CreateModel();
+                return;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠️ Waiting for RabbitMQ: {ex.Message}");
+                await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+            }
+        }
     }
 
     private async Task HandleEvent(TaskEvent taskEvent)
@@ -199,5 +238,51 @@ public class Worker : BackgroundService
             StatusEvents.TASK_DELETED => "Task deleted by user ID " + taskEvent.NewValue + " at " + taskEvent.OldValue,
             _ => taskEvent.EventType
         };
+    }
+
+    private async Task SaveNotification(Notification notification)
+    {
+        if (notification == null)
+        {
+            Console.WriteLine("❌ Notification is null");
+            return;
+        }
+
+        // 🟢 Save to DB FIRST
+        using (var scope = _scopeFactory.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            context.Notifications.Add(notification);
+            await context.SaveChangesAsync();
+        }
+        await SendNotificationToHub(notification);
+
+    }
+
+
+    private async Task SendNotificationToHub(Notification notification)
+    {
+        try
+        {
+            var client = _httpClientFactory.CreateClient();
+
+            var response = await client.PostAsJsonAsync(
+                $"{_notificationApiBaseUrl}/api/notifications/push",
+                notification);
+
+            if (response.IsSuccessStatusCode)
+            {
+                Console.WriteLine("✅ Notification sent to API");
+            }
+            else
+            {
+                Console.WriteLine($"⚠️ API failed: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ API Call Failed: {ex.Message}");
+        }
     }
 }
