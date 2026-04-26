@@ -1,7 +1,6 @@
-
 namespace Shared.Enums
 {
-      public enum TaskStatus
+    public enum TaskStatus
     {
         BACKLOG,
         TODO,
@@ -9,8 +8,4 @@ namespace Shared.Enums
         REVIEW,
         DONE
     }
-
 }
-
-  
-

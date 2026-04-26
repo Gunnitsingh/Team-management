@@ -1,16 +1,30 @@
-import { inject } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import * as signalR from '@microsoft/signalr';
-import { SignalRNotification } from './notification.interface';
+import { Subject } from 'rxjs';
+import { environment } from '../../../contants/constants';
+import { SignalRNotification, TaskProjectionMessage } from './notification.interface';
 
+@Injectable({
+  providedIn: 'root'
+})
 export class NotificationService {
-  private connection!: signalR.HubConnection;
+  private connection?: signalR.HubConnection;
   private readonly snackBar = inject(MatSnackBar);
+  private readonly notificationsSubject = new Subject<SignalRNotification>();
+  private readonly taskProjectionSubject = new Subject<TaskProjectionMessage>();
+
+  public readonly notifications$ = this.notificationsSubject.asObservable();
+  public readonly taskProjectionUpdates$ = this.taskProjectionSubject.asObservable();
 
   start() {
+    if (this.connection) {
+      return;
+    }
+
     this.connection = new signalR.HubConnectionBuilder()
-      .withUrl('http://localhost:8080/notificationHub', {
-        withCredentials: true // default usually, but ok to be explicit
+      .withUrl(`${environment.apiUrl.replace('/api', '')}/notificationHub`, {
+        withCredentials: true
       })
       .withAutomaticReconnect()
       .build();
@@ -19,7 +33,12 @@ export class NotificationService {
       .catch(err => console.log(err));
 
     this.connection.on('ReceiveNotification', (data: SignalRNotification) => {
+      this.notificationsSubject.next(data);
       this.snackBar.open(data.title, data.message, { duration: 2000 });
+    });
+
+    this.connection.on('TaskProjectionUpdated', (data: TaskProjectionMessage) => {
+      this.taskProjectionSubject.next(data);
     });
   }
 }

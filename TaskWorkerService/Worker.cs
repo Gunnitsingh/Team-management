@@ -2,13 +2,20 @@ using System.Diagnostics.Eventing.Reader;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using Shared.Constants;
 using Shared.Entities;
+using Shared.Models;
 
 public class Worker : BackgroundService
 {
+    private static readonly JsonSerializerOptions EnumAsStringJsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() }
+    };
+
     private IConnection _connection;
     private IModel _channel;
     private readonly IServiceProvider _serviceProvider;
@@ -118,6 +125,7 @@ public class Worker : BackgroundService
                 // throw new Exception("Test retry");
                 Console.WriteLine("📥 Event received from RabbitMQ");
                 await HandleEvent(taskEvent);
+                await SyncTaskProjection(taskEvent);
                 var notification = new Notification
                 {
                     UserId = taskEvent.ChangedBy.ToString() ?? "1",
@@ -224,6 +232,88 @@ public class Worker : BackgroundService
         await context.SaveChangesAsync();
     }
 
+    private async Task SyncTaskProjection(TaskEvent taskEvent)
+    {
+        TaskProjectionEvent projectionEvent;
+
+        using (var scope = _serviceProvider.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var sourceTask = await context.Tasks
+                .IgnoreQueryFilters()
+                .Include(t => t.AssignedToUser)
+                .FirstOrDefaultAsync(t => t.Id == taskEvent.TaskId);
+
+            var readModel = await context.TaskReadModels
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(t => t.Id == taskEvent.TaskId);
+
+            if (sourceTask == null)
+            {
+                if (readModel == null)
+                {
+                    return;
+                }
+
+                readModel.IsDeleted = true;
+                readModel.LastSyncedAt = DateTime.UtcNow;
+                await context.SaveChangesAsync();
+
+                projectionEvent = new TaskProjectionEvent
+                {
+                    EventType = taskEvent.EventType,
+                    TaskId = taskEvent.TaskId,
+                    IsDeleted = true
+                };
+            }
+            else
+            {
+                if (readModel == null)
+                {
+                    readModel = new TaskReadModel
+                    {
+                        Id = sourceTask.Id
+                    };
+                    context.TaskReadModels.Add(readModel);
+                }
+
+                readModel.Title = sourceTask.Title;
+                readModel.Status = sourceTask.Status;
+                readModel.Priority = sourceTask.Priority;
+                readModel.Description = sourceTask.Description;
+                readModel.AssignedToId = sourceTask.AssignedTo;
+                readModel.AssignedToName = sourceTask.AssignedToUser?.Name;
+                readModel.CreatedDate = sourceTask.CreatedDate;
+                readModel.DueDate = sourceTask.DueDate;
+                readModel.IsDeleted = sourceTask.IsDeleted;
+                readModel.LastSyncedAt = DateTime.UtcNow;
+
+                await context.SaveChangesAsync();
+
+                projectionEvent = new TaskProjectionEvent
+                {
+                    EventType = taskEvent.EventType,
+                    TaskId = sourceTask.Id,
+                    IsDeleted = sourceTask.IsDeleted,
+                    Task = new TaskReadDto
+                    {
+                        Id = readModel.Id,
+                        Title = readModel.Title,
+                        Status = readModel.Status,
+                        Priority = readModel.Priority,
+                        Description = readModel.Description,
+                        AssignedToId = readModel.AssignedToId,
+                        AssignedToName = readModel.AssignedToName,
+                        CreatedDate = readModel.CreatedDate,
+                        DueDate = readModel.DueDate
+                    }
+                };
+            }
+        }
+
+        await SendTaskProjectionToHub(projectionEvent);
+    }
+
     private static string GetEventDescription(TaskEvent taskEvent)
     {
         return taskEvent.EventType switch
@@ -269,7 +359,8 @@ public class Worker : BackgroundService
 
             var response = await client.PostAsJsonAsync(
                 $"{_notificationApiBaseUrl}/api/notifications/push",
-                notification);
+                notification,
+                EnumAsStringJsonOptions);
 
             if (response.IsSuccessStatusCode)
             {
@@ -283,6 +374,32 @@ public class Worker : BackgroundService
         catch (Exception ex)
         {
             Console.WriteLine($"❌ API Call Failed: {ex.Message}");
+        }
+    }
+
+    private async Task SendTaskProjectionToHub(TaskProjectionEvent projectionEvent)
+    {
+        try
+        {
+            var client = _httpClientFactory.CreateClient();
+
+            var response = await client.PostAsJsonAsync(
+                $"{_notificationApiBaseUrl}/api/notifications/tasks/sync",
+                projectionEvent,
+                EnumAsStringJsonOptions);
+
+            if (response.IsSuccessStatusCode)
+            {
+                Console.WriteLine("✅ Task projection synced to SignalR");
+            }
+            else
+            {
+                Console.WriteLine($"⚠️ Task sync API failed: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Task sync API call failed: {ex.Message}");
         }
     }
 }

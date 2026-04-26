@@ -4,9 +4,10 @@ export interface Task {
   status: string;
   priority: string;
   description: string;
+  createdDate: Date;
   assignedToId : number | null;
   assignedToName?: string;
-  dueDate : Date
+  dueDate : Date | null
 }
 
 export interface CreateTaskInterface {

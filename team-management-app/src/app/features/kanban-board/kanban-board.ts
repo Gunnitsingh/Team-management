@@ -1,4 +1,4 @@
-import { Component, DestroyRef, inject, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, inject, OnInit } from '@angular/core';
 import { CreateTaskInterface, Task } from '../../core/services/tasks/task-interface';
 import { TaskService } from '../../core/services/tasks/task.service';
 import { CommonModule } from '@angular/common';
@@ -15,14 +15,15 @@ import { UsersService } from '../../core/services/users/users';
 import { MatIconModule } from '@angular/material/icon';
 import { DeleteTask } from '../delete-task/delete-task';
 import { NotificationService } from '../../core/services/notification/notification';
+import { TaskProjectionMessage } from '../../core/services/notification/notification.interface';
+import { C } from '@angular/cdk/keycodes';
 
 @Component({
   selector: 'app-kanban-board',
   imports: [CommonModule, DragDropModule, MatButtonModule, MatDialogModule, MatIconModule, MatSnackBarModule],
   templateUrl: './kanban-board.html',
   styleUrls: ['./kanban-board.css'],
-  standalone: true,
-  providers: [NotificationService]
+  standalone: true
 })
 export class KanbanBoard implements OnInit {
   private readonly taskService = inject(TaskService);
@@ -31,6 +32,7 @@ export class KanbanBoard implements OnInit {
   private readonly snackBar = inject(MatSnackBar);
   private readonly destroyRef = inject(DestroyRef);
   private readonly notificationService = inject(NotificationService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   public readonly columns = Object.values(TaskStatus);
   public users$: Observable<Users[]> = this.userService.getAllUsers();
@@ -44,8 +46,26 @@ export class KanbanBoard implements OnInit {
     maxWidth: 'fit-content',
   };
 
-  public tasksByStatus$: Observable<Record<string, Task[]>> = this.tasksSubject.pipe(
-    map(tasks => this.columns.reduce((acc, c) => ({ ...acc, [c]: tasks.filter(t => t.status === c) }), {} as Record<string, Task[]>)),
+  public tasksByStatus$ = this.tasksSubject.pipe(
+    map(tasks => {
+      const grouped = Object.fromEntries(
+        this.columns.map(c => [c, []])
+      ) as Record<string, Task[]>;
+
+      tasks.forEach(task => {
+        console.log('status:', task.status);
+        console.log('available columns:', Object.keys(grouped));
+
+        if (!grouped[task.status]) {
+          console.warn('Missing group for:', task.status);
+          return;
+        }
+
+        grouped[task.status].push(task);
+      });
+      return grouped;
+    }),
+    tap(() => this.cdr.markForCheck()),
     takeUntilDestroyed(this.destroyRef)
   );
 
@@ -56,6 +76,9 @@ export class KanbanBoard implements OnInit {
       this.tasksSubject.next(tasks);
     });
     this.notificationService.start();
+    this.notificationService.taskProjectionUpdates$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(event => this.applyTaskProjection(event));
 
   }
 
@@ -168,5 +191,30 @@ export class KanbanBoard implements OnInit {
   public trackByTask(index: number, task: Task): number {
     return task.id;
   }
-}
 
+  private applyTaskProjection(event: TaskProjectionMessage) {
+    const currentTasks = this.tasksSubject.getValue();
+
+    if (event.isDeleted) {
+      this.tasksSubject.next(currentTasks.filter(task => task.id !== event.taskId));
+      return;
+    }
+
+    if (!event.task) {
+      return;
+    }
+
+    const existingTaskIndex = currentTasks.findIndex(task => task.id === event.task!.id);
+
+    if (existingTaskIndex === -1) {
+      this.tasksSubject.next([event.task, ...currentTasks]);
+      return;
+    }
+
+    const updatedTasks = currentTasks.map(task =>
+      task.id === event.task!.id ? { ...task, ...event.task } : task
+    );
+
+    this.tasksSubject.next(updatedTasks);
+  }
+}

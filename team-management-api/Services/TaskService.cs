@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Shared.Constants;
 using Shared.Entities;
+using Shared.Models;
 
 public class TaskService : ITaskService
 {
@@ -26,6 +27,24 @@ public class TaskService : ITaskService
                 Priority = t.Priority,
                 AssignedToId = t.AssignedTo,
                 AssignedToName = t.AssignedToUser != null ? t.AssignedToUser.Name : null,
+                CreatedDate = t.CreatedDate,
+                Description = t.Description,
+                DueDate = t.DueDate
+            });
+    }
+
+    public IQueryable<TaskReadDto> GetTaskReadQuery()
+    {
+        return _context.TaskReadModels
+            .OrderByDescending(t => t.CreatedDate)
+            .Select(t => new TaskReadDto
+            {
+                Id = t.Id,
+                Title = t.Title,
+                Status = t.Status,
+                Priority = t.Priority,
+                AssignedToId = t.AssignedToId,
+                AssignedToName = t.AssignedToName,
                 CreatedDate = t.CreatedDate,
                 Description = t.Description,
                 DueDate = t.DueDate
