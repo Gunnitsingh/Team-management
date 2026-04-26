@@ -17,6 +17,11 @@ public class AppDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+
+        modelBuilder.Entity<TaskItem>()
+              .Property(t => t.Version)
+              .IsConcurrencyToken();
+
         modelBuilder.Entity<TaskItem>()
            .Property(t => t.Status)
            .HasConversion(
@@ -46,5 +51,12 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<TaskReadModel>()
             .HasQueryFilter(t => !t.IsDeleted);
+
+        modelBuilder.Entity<TaskReadModel>()
+.Property(t => t.Version)
+.HasDefaultValue(0);
+
     }
+
+
 }

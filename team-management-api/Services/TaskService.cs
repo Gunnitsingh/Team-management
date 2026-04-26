@@ -19,6 +19,7 @@ public class TaskService : ITaskService
     public IQueryable<TaskDto> GetTaskDtoQuery()
     {
         return _context.Tasks
+            .Include(t => t.AssignedToUser)
             .Select(t => new TaskDto
             {
                 Id = t.Id,
@@ -29,7 +30,8 @@ public class TaskService : ITaskService
                 AssignedToName = t.AssignedToUser != null ? t.AssignedToUser.Name : null,
                 CreatedDate = t.CreatedDate,
                 Description = t.Description,
-                DueDate = t.DueDate
+                DueDate = t.DueDate,
+                Version = t.Version
             });
     }
 
@@ -47,7 +49,8 @@ public class TaskService : ITaskService
                 AssignedToName = t.AssignedToName,
                 CreatedDate = t.CreatedDate,
                 Description = t.Description,
-                DueDate = t.DueDate
+                DueDate = t.DueDate,
+                Version = t.Version
             });
     }
 
@@ -59,7 +62,7 @@ public class TaskService : ITaskService
     }
 
 
-    public void PublishUpdateEvents(TaskSnapshot task, UpdateTaskDto dto, TaskDto updatedTask)
+    public void PublishUpdateEvents(TaskSnapshot task, UpdateTaskDto dto, TaskDto updatedTask, int version)
     {
         var originalAssignedTo = task.AssignedTo;
         var originalTitle = task.Title;
@@ -71,43 +74,43 @@ public class TaskService : ITaskService
 
         if (originalTitle != dto.Title)
         {
-            events.Add(CreateEvent(StatusEvents.TASK_TITLE_UPDATED, updatedTask.Id, originalTitle ?? "", dto.Title ?? ""));
+            events.Add(CreateEvent(StatusEvents.TASK_TITLE_UPDATED, updatedTask.Id, originalTitle ?? "", dto.Title ?? "", version));
         }
 
         if (originalDescription != dto.Description)
         {
-            events.Add(CreateEvent(StatusEvents.TASK_DESCRIPTION_UPDATED, updatedTask.Id, originalDescription ?? "", dto.Description ?? ""));
+            events.Add(CreateEvent(StatusEvents.TASK_DESCRIPTION_UPDATED, updatedTask.Id, originalDescription ?? "", dto.Description ?? "", version));
         }
 
         if (originalPriority != dto.Priority)
         {
-            events.Add(CreateEvent(StatusEvents.TASK_PRIORITY_UPDATED, updatedTask.Id, originalPriority.ToString(), dto.Priority.ToString()));
+            events.Add(CreateEvent(StatusEvents.TASK_PRIORITY_UPDATED, updatedTask.Id, originalPriority.ToString(), dto.Priority.ToString(), version));
         }
 
         if (originalDueDate != dto.DueDate)
         {
-            events.Add(CreateEvent(StatusEvents.TASK_DUE_DATE_UPDATED, updatedTask.Id, originalDueDate?.ToString() ?? "", dto.DueDate?.ToString() ?? ""));
+            events.Add(CreateEvent(StatusEvents.TASK_DUE_DATE_UPDATED, updatedTask.Id, originalDueDate?.ToString() ?? "", dto.DueDate?.ToString() ?? "", version));
         }
 
         if (originalAssignedTo != dto.AssignedTo)
         {
-            events.Add(CreateEvent(StatusEvents.TASK_ASSIGNED, updatedTask.Id, originalName?.ToString() ?? "", updatedTask.AssignedToName ?? ""));
+            events.Add(CreateEvent(StatusEvents.TASK_ASSIGNED, updatedTask.Id, originalName?.ToString() ?? "", updatedTask.AssignedToName ?? "", version));
         }
 
         events.ForEach(e => Publish(e));
     }
 
-    public void PublishEvents(string eventType, int taskId, string oldValue = "", string newValue = "")
+    public void PublishEvents(string eventType, int taskId, string oldValue = "", string newValue = "", int version = 1)
     {
-        Publish(CreateEvent(eventType, taskId, oldValue, newValue));
+        Publish(CreateEvent(eventType, taskId, oldValue, newValue, version));
     }
 
     public int GetCurrentUserId()
     {
-        return int.Parse(_httpContext.HttpContext?.Items["UserId"].ToString() ?? 0.ToString());
+        return int.Parse((_httpContext.HttpContext?.Items["UserId"]?.ToString()) ?? "0");
     }
 
-    private TaskEvent CreateEvent(string eventType, int taskId, string oldValue, string newValue)
+    private TaskEvent CreateEvent(string eventType, int taskId, string oldValue, string newValue, int version = 1)
     {
         return new TaskEvent
         {
@@ -115,9 +118,10 @@ public class TaskService : ITaskService
             TaskId = taskId,
             OldValue = oldValue,
             NewValue = newValue,
+            Version = version,
             Timestamp = DateTime.UtcNow,
             CorrelationId = _httpContext.HttpContext?.Items["CorrelationId"]?.ToString() ?? "",
-            ChangedBy = int.Parse(_httpContext.HttpContext?.Items["UserId"].ToString() ?? 0.ToString()),
+            ChangedBy = int.Parse((_httpContext.HttpContext?.Items["UserId"]?.ToString()) ?? "0"),
             ChangedByName = _httpContext.HttpContext?.Items["UserName"]?.ToString() ?? "Unknown"
         };
     }

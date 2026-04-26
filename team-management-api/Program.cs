@@ -18,6 +18,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton<IMessagePublisher, RabbitMqPublisher>();
+builder.Services.AddScoped<ConcurrencySaveHelper>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ITaskService, TaskService>();
 builder.WebHost.UseUrls("http://0.0.0.0:80");

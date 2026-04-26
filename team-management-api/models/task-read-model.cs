@@ -10,5 +10,6 @@ public class TaskReadModel
     public DateTime CreatedDate { get; set; }
     public DateTime? DueDate { get; set; }
     public bool IsDeleted { get; set; }
+    public int Version { get; set; }
     public DateTime LastSyncedAt { get; set; } = DateTime.UtcNow;
 }

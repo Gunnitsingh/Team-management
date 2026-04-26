@@ -16,8 +16,8 @@ public class Worker : BackgroundService
         Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() }
     };
 
-    private IConnection _connection;
-    private IModel _channel;
+    private IConnection? _connection;
+    private IModel? _channel;
     private readonly IServiceProvider _serviceProvider;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IServiceScopeFactory _scopeFactory;
@@ -56,7 +56,7 @@ public class Worker : BackgroundService
     { "x-dead-letter-routing-key", "task-events-retry" }
 };
 
-        _channel.QueueDeclare(
+        _channel!.QueueDeclare(
             queue: MqEvents.TASK_EVENTS,
             durable: true,
             exclusive: false,
@@ -70,21 +70,21 @@ public class Worker : BackgroundService
     { "x-message-ttl", 5000 } // 5 sec delay
 };
 
-        _channel.QueueDeclare(
+        _channel!.QueueDeclare(
             queue: MqEvents.TASK_EVENTS_RETRY,
             durable: true,
             exclusive: false,
             autoDelete: false,
             arguments: retryArgs
         );
-        _channel.QueueDeclare(
+        _channel!.QueueDeclare(
             queue: MqEvents.TASK_EVENTS_DLQ,
             durable: true,
             exclusive: false,
             autoDelete: false,
             arguments: null
         );
-        var consumer = new EventingBasicConsumer(_channel);
+        var consumer = new EventingBasicConsumer(_channel!);
 
         consumer.Received += async (model, ea) =>
         {
@@ -234,84 +234,112 @@ public class Worker : BackgroundService
 
     private async Task SyncTaskProjection(TaskEvent taskEvent)
     {
-        TaskProjectionEvent projectionEvent;
+        TaskProjectionEvent? projectionEvent = null;
 
-        using (var scope = _serviceProvider.CreateScope())
+        using var scope = _serviceProvider.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        // Get existing read model first
+        var readModel = await context.TaskReadModels
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(t => t.Id == taskEvent.TaskId);
+
+        // 🧠 Idempotency + ordering guard
+        if (readModel != null && taskEvent.Version <= readModel.Version)
         {
-            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var sourceTask = await context.Tasks
-                .IgnoreQueryFilters()
-                .Include(t => t.AssignedToUser)
-                .FirstOrDefaultAsync(t => t.Id == taskEvent.TaskId);
-
-            var readModel = await context.TaskReadModels
-                .IgnoreQueryFilters()
-                .FirstOrDefaultAsync(t => t.Id == taskEvent.TaskId);
-
-            if (sourceTask == null)
-            {
-                if (readModel == null)
-                {
-                    return;
-                }
-
-                readModel.IsDeleted = true;
-                readModel.LastSyncedAt = DateTime.UtcNow;
-                await context.SaveChangesAsync();
-
-                projectionEvent = new TaskProjectionEvent
-                {
-                    EventType = taskEvent.EventType,
-                    TaskId = taskEvent.TaskId,
-                    IsDeleted = true
-                };
-            }
-            else
-            {
-                if (readModel == null)
-                {
-                    readModel = new TaskReadModel
-                    {
-                        Id = sourceTask.Id
-                    };
-                    context.TaskReadModels.Add(readModel);
-                }
-
-                readModel.Title = sourceTask.Title;
-                readModel.Status = sourceTask.Status;
-                readModel.Priority = sourceTask.Priority;
-                readModel.Description = sourceTask.Description;
-                readModel.AssignedToId = sourceTask.AssignedTo;
-                readModel.AssignedToName = sourceTask.AssignedToUser?.Name;
-                readModel.CreatedDate = sourceTask.CreatedDate;
-                readModel.DueDate = sourceTask.DueDate;
-                readModel.IsDeleted = sourceTask.IsDeleted;
-                readModel.LastSyncedAt = DateTime.UtcNow;
-
-                await context.SaveChangesAsync();
-
-                projectionEvent = new TaskProjectionEvent
-                {
-                    EventType = taskEvent.EventType,
-                    TaskId = sourceTask.Id,
-                    IsDeleted = sourceTask.IsDeleted,
-                    Task = new TaskReadDto
-                    {
-                        Id = readModel.Id,
-                        Title = readModel.Title,
-                        Status = readModel.Status,
-                        Priority = readModel.Priority,
-                        Description = readModel.Description,
-                        AssignedToId = readModel.AssignedToId,
-                        AssignedToName = readModel.AssignedToName,
-                        CreatedDate = readModel.CreatedDate,
-                        DueDate = readModel.DueDate
-                    }
-                };
-            }
+            // Ignore duplicate or out-of-order event
+            return;
         }
 
-        await SendTaskProjectionToHub(projectionEvent);
+        // Fetch source (still using your current approach)
+        var sourceTask = await context.Tasks
+            .IgnoreQueryFilters()
+            .Include(t => t.AssignedToUser)
+            .FirstOrDefaultAsync(t => t.Id == taskEvent.TaskId);
+
+        if (sourceTask == null)
+        {
+            // Task deleted (or doesn't exist anymore)
+            if (readModel == null)
+            {
+                return;
+            }
+
+            readModel.IsDeleted = true;
+            readModel.LastSyncedAt = DateTime.UtcNow;
+            readModel.Version = taskEvent.Version;
+
+            await context.SaveChangesAsync();
+
+            projectionEvent = new TaskProjectionEvent
+            {
+                EventType = taskEvent.EventType,
+                TaskId = taskEvent.TaskId,
+                IsDeleted = true
+            };
+        }
+        else
+        {
+            if (readModel == null)
+            {
+                readModel = new TaskReadModel
+                {
+                    Id = sourceTask.Id
+                };
+
+                context.TaskReadModels.Add(readModel);
+            }
+
+            // Map fields
+            readModel.Title = sourceTask.Title;
+            readModel.Status = sourceTask.Status;
+            readModel.Priority = sourceTask.Priority;
+            readModel.Description = sourceTask.Description;
+            readModel.AssignedToId = sourceTask.AssignedTo;
+            readModel.AssignedToName = sourceTask.AssignedToUser?.Name;
+            readModel.CreatedDate = sourceTask.CreatedDate;
+            readModel.DueDate = sourceTask.DueDate;
+            readModel.IsDeleted = sourceTask.IsDeleted;
+
+            // 🧠 Version + sync tracking
+            readModel.Version = taskEvent.Version;
+            readModel.LastSyncedAt = DateTime.UtcNow;
+
+            await context.SaveChangesAsync();
+
+            projectionEvent = new TaskProjectionEvent
+            {
+                EventType = taskEvent.EventType,
+                TaskId = sourceTask.Id,
+                IsDeleted = sourceTask.IsDeleted,
+                Task = new TaskReadDto
+                {
+                    Id = readModel.Id,
+                    Title = readModel.Title,
+                    Status = readModel.Status,
+                    Priority = readModel.Priority,
+                    Description = readModel.Description,
+                    AssignedToId = readModel.AssignedToId,
+                    AssignedToName = readModel.AssignedToName,
+                    CreatedDate = readModel.CreatedDate,
+                    DueDate = readModel.DueDate
+                }
+            };
+        }
+
+        // 🚨 Don't break projection if hub fails
+        if (projectionEvent != null)
+        {
+            try
+            {
+                await SendTaskProjectionToHub(projectionEvent);
+            }
+            catch (Exception ex)
+            {
+                // TODO: log properly
+                // _logger.LogError(ex, "Failed to send projection event for TaskId {TaskId}", taskEvent.TaskId);
+            }
+        }
     }
 
     private static string GetEventDescription(TaskEvent taskEvent)

@@ -189,6 +189,9 @@ namespace team_management_api.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
+                    b.Property<int>("Version")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("LastSyncedAt")
                         .HasColumnType("datetime2");
 

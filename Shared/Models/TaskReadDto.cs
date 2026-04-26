@@ -13,5 +13,6 @@ namespace Shared.Models
         public string? AssignedToName { get; set; }
         public DateTime CreatedDate { get; set; }
         public DateTime? DueDate { get; set; }
+        public int Version { get; set; }
     }
 }

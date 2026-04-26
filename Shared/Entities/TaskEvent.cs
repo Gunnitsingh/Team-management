@@ -16,5 +16,6 @@ namespace Shared.Entities
 
         public int ChangedBy { get; set; }
         public string ChangedByName { get; set; } = null!;
+        public int Version { get; set; }
     }
 }

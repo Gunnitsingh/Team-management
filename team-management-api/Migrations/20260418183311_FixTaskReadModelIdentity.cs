@@ -25,6 +25,7 @@ namespace team_management_api.Migrations
                     CreatedDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     DueDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    Version = table.Column<int>(type: "int", nullable: false, defaultValue: 1),
                     LastSyncedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
