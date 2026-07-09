@@ -33,6 +33,18 @@ public class RabbitMqPublisher : IMessagePublisher
             var body = Encoding.UTF8.GetBytes(message);
             var properties = _channel!.CreateBasicProperties();
             properties.Persistent = true;
+            var args = new Dictionary<string, object>
+            {
+                { "x-dead-letter-exchange", "" },
+                { "x-dead-letter-routing-key", MqEvents.TASK_EVENTS_RETRY }
+            };
+
+            _channel.QueueDeclare(
+                queue: MqEvents.TASK_EVENTS,
+                durable: true,
+                exclusive: false,
+                autoDelete: false,
+                arguments: args);
 
             _channel.BasicPublish(
                 exchange: "",
@@ -44,6 +56,7 @@ public class RabbitMqPublisher : IMessagePublisher
         catch (Exception ex)
         {
             Console.WriteLine($"RabbitMQ publish failed: {ex.Message}");
+            throw;
         }
     }
 

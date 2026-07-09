@@ -16,7 +16,6 @@ import { MatIconModule } from '@angular/material/icon';
 import { DeleteTask } from '../delete-task/delete-task';
 import { NotificationService } from '../../core/services/notification/notification';
 import { TaskProjectionMessage } from '../../core/services/notification/notification.interface';
-import { C } from '@angular/cdk/keycodes';
 
 @Component({
   selector: 'app-kanban-board',
@@ -40,7 +39,7 @@ export class KanbanBoard implements OnInit {
   public taskStatusLabels = TASK_STATUS_LABELS;
 
   private readonly dialogConfig = {
-    minHeight: '400px',
+    minHeight: '400px',// ... existing code ...
     maxHeight: '60vh',
     minWidth: '60vw',
     maxWidth: 'fit-content',

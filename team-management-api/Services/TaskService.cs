@@ -2,17 +2,16 @@ using Microsoft.EntityFrameworkCore;
 using Shared.Constants;
 using Shared.Entities;
 using Shared.Models;
+using System.Text.Json;
 
 public class TaskService : ITaskService
 {
     private readonly AppDbContext _context;
-    private readonly IMessagePublisher _publisher;
 
     private readonly IHttpContextAccessor _httpContext;
-    public TaskService(AppDbContext context, IMessagePublisher publisher, IHttpContextAccessor httpContext)
+    public TaskService(AppDbContext context, IHttpContextAccessor httpContext)
     {
         _context = context;
-        _publisher = publisher;
         _httpContext = httpContext;
     }
 
@@ -97,12 +96,12 @@ public class TaskService : ITaskService
             events.Add(CreateEvent(StatusEvents.TASK_ASSIGNED, updatedTask.Id, originalName?.ToString() ?? "", updatedTask.AssignedToName ?? "", version));
         }
 
-        events.ForEach(e => Publish(e));
+        events.ForEach(AddToOutbox);
     }
 
     public void PublishEvents(string eventType, int taskId, string oldValue = "", string newValue = "", int version = 1)
     {
-        Publish(CreateEvent(eventType, taskId, oldValue, newValue, version));
+        AddToOutbox(CreateEvent(eventType, taskId, oldValue, newValue, version));
     }
 
     public int GetCurrentUserId()
@@ -126,8 +125,13 @@ public class TaskService : ITaskService
         };
     }
 
-    private void Publish(TaskEvent taskEvent)
+    private void AddToOutbox(TaskEvent taskEvent)
     {
-        _publisher.Publish(taskEvent);
+        _context.OutboxMessages.Add(new OutboxMessage
+        {
+            Type = nameof(TaskEvent),
+            Payload = JsonSerializer.Serialize(taskEvent),
+            OccurredOnUtc = DateTime.UtcNow
+        });
     }
 }

@@ -41,11 +41,10 @@ builder.Services.AddSignalR()
 
 var app = builder.Build();
 
-using (var scope = app.Services.CreateScope())
-{
-    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    dbContext.Database.Migrate();
-}
+// SQL Server can still be starting when the API container boots.
+// Retry migrations for a short window so `docker compose up` does not fail
+// just because the database container was slower to initialize.
+await MigrateDatabaseAsync(app);
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -84,6 +83,38 @@ app.UseMiddleware<TaskMiddleware>();
 
 app.MapHub<NotificationHub>("/notificationHub");
 app.Run();
+
+static async Task MigrateDatabaseAsync(WebApplication app)
+{
+    const int maxAttempts = 12;
+    var delay = TimeSpan.FromSeconds(5);
+
+    for (var attempt = 1; attempt <= maxAttempts; attempt++)
+    {
+        try
+        {
+            using var scope = app.Services.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await dbContext.Database.MigrateAsync();
+            return;
+        }
+        catch (Exception ex) when (attempt < maxAttempts)
+        {
+            app.Logger.LogWarning(
+                ex,
+                "Database migration attempt {Attempt}/{MaxAttempts} failed. Retrying in {DelaySeconds} seconds.",
+                attempt,
+                maxAttempts,
+                (int)delay.TotalSeconds);
+
+            await Task.Delay(delay);
+        }
+    }
+
+    using var finalScope = app.Services.CreateScope();
+    var finalDbContext = finalScope.ServiceProvider.GetRequiredService<AppDbContext>();
+    await finalDbContext.Database.MigrateAsync();
+}
 
 record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
 {

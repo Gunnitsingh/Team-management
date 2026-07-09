@@ -7,13 +7,11 @@ using Shared.Constants;
 public class TasksController : ControllerBase
 {
     private readonly AppDbContext _context;
-    private readonly IMessagePublisher _publisher;
     private readonly ITaskService _taskService;
     private readonly ConcurrencySaveHelper _concurrencyHelper;
-    public TasksController(AppDbContext context, IMessagePublisher publisher, ITaskService taskService, ConcurrencySaveHelper concurrencyHelper)
+    public TasksController(AppDbContext context, ITaskService taskService, ConcurrencySaveHelper concurrencyHelper)
     {
         _context = context;
-        _publisher = publisher;
         _taskService = taskService;
         _concurrencyHelper = concurrencyHelper;
     }
@@ -63,15 +61,20 @@ public class TasksController : ControllerBase
             CreatedDate = DateTime.UtcNow
         };
 
-        _context.Tasks.Add(task);
-        await _concurrencyHelper.SaveWithConcurrencyRetry(async () =>
- {
+        var strategy = _context.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
+        {
+            await using var transaction = await _context.Database.BeginTransactionAsync();
 
+            _context.Tasks.Add(task);
+            await _context.SaveChangesAsync();
 
-     await _context.SaveChangesAsync();
- });
+            _taskService.PublishEvents(StatusEvents.TASK_CREATED, task.Id, "", "Created", task.Version);
+            await _context.SaveChangesAsync();
 
-        _taskService.PublishEvents(StatusEvents.TASK_CREATED, task.Id, "", "Created", task.Version);
+            await transaction.CommitAsync();
+        });
+
         var updatedTask = await _taskService.GetTaskDtoQuery()
             .FirstOrDefaultAsync(t => t.Id == task.Id);
 
@@ -87,15 +90,24 @@ public class TasksController : ControllerBase
             return NotFound();
 
 
-        await _concurrencyHelper.SaveWithConcurrencyRetry(async () =>
-{
-    task.Status = dto.Status;
-    task.Version += 1;
+        var strategy = _context.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
+        {
+            await using var transaction = await _context.Database.BeginTransactionAsync();
 
-    await _context.SaveChangesAsync();
-});
+            await _concurrencyHelper.SaveWithConcurrencyRetry(async () =>
+            {
+                task.Status = dto.Status;
+                task.Version += 1;
 
-        _taskService.PublishEvents(StatusEvents.TASK_STATUS_UPDATED, task.Id, oldStatus.ToString(), dto.Status.ToString(), task.Version);
+                await _context.SaveChangesAsync();
+            });
+
+            _taskService.PublishEvents(StatusEvents.TASK_STATUS_UPDATED, task.Id, oldStatus.ToString(), dto.Status.ToString(), task.Version);
+            await _context.SaveChangesAsync();
+
+            await transaction.CommitAsync();
+        });
 
         var updatedTask = await _taskService.GetTaskDtoQuery()
        .FirstOrDefaultAsync(t => t.Id == id);
@@ -107,10 +119,19 @@ public class TasksController : ControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateTask(int id, [FromBody] UpdateTaskDto dto)
     {
-        var task = await _context.Tasks.FindAsync(id);
+        var task = await _context.Tasks
+            .Include(t => t.AssignedToUser)
+            .FirstOrDefaultAsync(t => t.Id == id);
 
         if (task == null)
             return NotFound();
+
+        var newAssignedToName = dto.AssignedTo.HasValue
+            ? await _context.Users
+                .Where(u => u.Id == dto.AssignedTo.Value)
+                .Select(u => u.Name)
+                .FirstOrDefaultAsync()
+            : null;
 
         TaskSnapshot originalTask = new TaskSnapshot
         {
@@ -123,23 +144,36 @@ public class TasksController : ControllerBase
         };
         // Update fields
 
+        var strategy = _context.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
+        {
+            await using var transaction = await _context.Database.BeginTransactionAsync();
 
-        await _concurrencyHelper.SaveWithConcurrencyRetry(async () =>
-{
-    task.Title = dto.Title;
-    task.Description = dto.Description;
-    task.Priority = dto.Priority;
-    task.AssignedTo = dto.AssignedTo;
-    task.DueDate = dto.DueDate;
-    task.Version += 1;
+            await _concurrencyHelper.SaveWithConcurrencyRetry(async () =>
+            {
+                task.Title = dto.Title;
+                task.Description = dto.Description;
+                task.Priority = dto.Priority;
+                task.AssignedTo = dto.AssignedTo;
+                task.DueDate = dto.DueDate;
+                task.Version += 1;
 
-    await _context.SaveChangesAsync();
-});
+                await _context.SaveChangesAsync();
+            });
+
+            _taskService.PublishUpdateEvents(originalTask, dto, new TaskDto
+            {
+                Id = task.Id,
+                AssignedToName = newAssignedToName
+            }, task.Version);
+            await _context.SaveChangesAsync();
+
+            await transaction.CommitAsync();
+        });
         // Return updated DTO
         var updatedTask = await _taskService.GetTaskDtoQuery()
             .FirstAsync(t => t.Id == id);
 
-        _taskService.PublishUpdateEvents(originalTask, dto, updatedTask, updatedTask.Version);
         return Ok(updatedTask);
     }
     [HttpDelete("{id}")]
@@ -150,17 +184,26 @@ public class TasksController : ControllerBase
         if (task == null)
             return NotFound();
 
+        var strategy = _context.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
+        {
+            await using var transaction = await _context.Database.BeginTransactionAsync();
 
-        await _concurrencyHelper.SaveWithConcurrencyRetry(async () =>
-{
-    task.IsDeleted = true;
-    task.DeletedBy = _taskService.GetCurrentUserId();
-    task.DeletedAt = DateTime.UtcNow;
-    task.Version += 1;
+            await _concurrencyHelper.SaveWithConcurrencyRetry(async () =>
+            {
+                task.IsDeleted = true;
+                task.DeletedBy = _taskService.GetCurrentUserId();
+                task.DeletedAt = DateTime.UtcNow;
+                task.Version += 1;
 
-    await _context.SaveChangesAsync();
-});
-        _taskService.PublishEvents(StatusEvents.TASK_DELETED, task.Id, task.DeletedAt.ToString(), task.DeletedBy.ToString(), task.Version);
+                await _context.SaveChangesAsync();
+            });
+
+            _taskService.PublishEvents(StatusEvents.TASK_DELETED, task.Id, task.DeletedAt.ToString(), task.DeletedBy.ToString(), task.Version);
+            await _context.SaveChangesAsync();
+
+            await transaction.CommitAsync();
+        });
 
         return NoContent();
     }

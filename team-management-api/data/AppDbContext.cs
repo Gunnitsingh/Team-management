@@ -14,6 +14,7 @@ public class AppDbContext : DbContext
     public DbSet<TaskActivity> TaskActivities { get; set; }
 
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -55,6 +56,20 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<TaskReadModel>()
 .Property(t => t.Version)
 .HasDefaultValue(0);
+
+        modelBuilder.Entity<OutboxMessage>()
+            .HasKey(o => o.Id);
+
+        modelBuilder.Entity<OutboxMessage>()
+            .Property(o => o.Type)
+            .HasMaxLength(256);
+
+        modelBuilder.Entity<OutboxMessage>()
+            .Property(o => o.Payload)
+            .IsRequired();
+
+        modelBuilder.Entity<OutboxMessage>()
+            .HasIndex(o => new { o.ProcessedOnUtc, o.OccurredOnUtc });
 
     }
 
