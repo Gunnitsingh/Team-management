@@ -1,3 +1,4 @@
+
 services:
   api:
     build:
@@ -9,12 +10,16 @@ services:
     environment:
       RabbitMq__HostName: rabbitmq
       RabbitMq__Port: 5672
-      ConnectionStrings__DefaultConnection: Server=sqlserver,1433;Database=TeamManagementDb;User Id=sa;Password=YourStrong@123;TrustServerCertificate=True;
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=TeamManagementDb;User Id=sa;Password=${SA_PASSWORD:?Set SA_PASSWORD in .env};TrustServerCertificate=True;"
       Ollama__BaseUrl: http://host.docker.internal:11434
       Ollama__Model: llama3.1:8b
     depends_on:
-      - rabbitmq
-      - sqlserver
+      rabbitmq:
+        condition: service_healthy
+      sqlserver:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   worker:
     build:
@@ -25,27 +30,43 @@ services:
       RabbitMq__HostName: rabbitmq
       RabbitMq__Port: 5672
       NotificationApi__BaseUrl: http://api
-      ConnectionStrings__DefaultConnection: Server=sqlserver,1433;Database=TeamManagementDb;User Id=sa;Password=YourStrong@123;TrustServerCertificate=True;
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=TeamManagementDb;User Id=sa;Password=${SA_PASSWORD:?Set SA_PASSWORD in .env};TrustServerCertificate=True;"
     depends_on:
-      - api
-      - rabbitmq
-      - sqlserver
+      api:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+      sqlserver:
+        condition: service_healthy
 
   rabbitmq:
     image: rabbitmq:3-management
     ports:
       - "5672:5672"
       - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
     environment:
       ACCEPT_EULA: "Y"
-      SA_PASSWORD: "YourStrong@123"
+      MSSQL_SA_PASSWORD: ${SA_PASSWORD:?Set SA_PASSWORD in .env}
     ports:
       - "1433:1433"
     volumes:
       - sqlserver-data:/var/opt/mssql
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$$MSSQL_SA_PASSWORD" -C -Q "SELECT 1" || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
 
 volumes:
   sqlserver-data:

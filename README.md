@@ -17,6 +17,7 @@ The solution is organized into separate application components:
 - **Data storage:** SQL Server
 - **Messaging:** RabbitMQ
 - **Local development:** Docker Compose
+- **LLM:** Ollama
 
 ## Features
 
@@ -42,6 +43,7 @@ The solution is organized into separate application components:
 | Messaging | RabbitMQ |
 | Architecture patterns | CQRS and Outbox Pattern, where implemented |
 | Containers | Docker, Docker Compose |
+| LLM | Ollama
 
 ## Repository Structure
 
@@ -78,9 +80,19 @@ flowchart TD
     Shared -.-> Worker
 ```
 
-This diagram is a conceptual starting point. Adjust the connections to match the actual implementation—for example, whether the API publishes messages directly and whether the worker reads or writes particular database records.
+### Deployment and Runtime Architecture
 
-## Running Locally
+- **API:** ASP.NET Core Web API running in Docker.
+- **Background processing:** .NET Worker Service running in Docker.
+- **Database:** SQL Server running in Docker, with persistent storage through the `sqlserver-data` volume.
+- **Messaging:** RabbitMQ running in Docker.
+- **Frontend:** Angular application started separately on the host machine during local development.
+- **AI integration:** Ollama runs locally on the host machine. The API container connects to it using `http://host.docker.internal:11434` on Docker Desktop for Mac.
+
+Docker Compose orchestrates the backend services and their dependencies. The Angular frontend and Ollama are started separately.
+
+
+This diagram is a conceptual starting point. Adjust the connections to match the actual implementation—for example, whether the API publishes messages directly and whether the worker reads or writes particular database records.
 
 ### Prerequisites
 
@@ -88,12 +100,35 @@ This diagram is a conceptual starting point. Adjust the connections to match the
 - Docker Desktop or Docker Engine with Docker Compose
 - Node.js and npm
 - .NET SDK, if you want to run or debug backend components outside Docker
+- Ollam installed (Optional for AI summary feature)
+
+
+## Configuration
+
+The application uses environment variables for database credentials and service configuration.
+
+Create a local `.env` file alongside `docker-compose.yml`:
+
+```dotenv
+SA_PASSWORD=YourUniqueStrongLocalPassword123!
+```
+
+Ensure `.env` is listed in `.gitignore`. Never commit real credentials or secrets to the repository.
+
+The Docker Compose configuration uses this password for the SQL Server container and the connection strings consumed by the API and worker.
+
+The API's Ollama configuration specifies the host URL and model name. Ensure Ollama is running on the host and the configured model is available before generating AI sprint summaries.
+
+For contributors, provide a `.env.example` containing placeholder values rather than actual credentials.
+
+## Running Locally
 
 ### 1. Clone the repository
 
 ```bash
 git clone https://github.com/Gunnitsingh/Team-management.git
 cd Team-management
+Configure .env.
 ```
 
 ### 2. Start the backend and dependencies
@@ -136,6 +171,10 @@ If the project uses a different npm script, check `package.json` and substitute 
 - Test task creation and status updates.
 - Verify RabbitMQ messaging and background processing.
 - Confirm the audit trail and sprint summary work as expected.
+
+
+### 5. Start or verify Ollama
+- Confirm Ollama is running for AI summary feature
 
 ### Troubleshooting
 
