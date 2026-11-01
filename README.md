@@ -86,7 +86,8 @@ This diagram is a conceptual starting point. Adjust the connections to match the
 
 - Git
 - Docker Desktop or Docker Engine with Docker Compose
-- Node.js and npm for the Angular frontend
+- Node.js and npm
+- .NET SDK, if you want to run or debug backend components outside Docker
 
 ### 1. Clone the repository
 
@@ -95,44 +96,62 @@ git clone https://github.com/Gunnitsingh/Team-management.git
 cd Team-management
 ```
 
-### 2. Configure environment variables
-
-Configure the SQL Server credentials and application connection strings using environment variables or a local environment file that is excluded from version control.
-
-Never commit production credentials, access tokens, or other secrets.
-
-### 3. Start the backend services
-
-Build and start the API, background worker, SQL Server and RabbitMQ:
+### 2. Start the backend and dependencies
 
 ```bash
 docker compose up --build -d
 ```
 
-Check the running containers:
+This starts the configured backend services and dependencies:
+
+- ASP.NET Core API
+- .NET background worker
+- SQL Server
+- RabbitMQ
+
+Verify container status:
 
 ```bash
 docker compose ps
 ```
 
-Inspect service logs when troubleshooting:
+### 3. Start the Angular frontend
+
+Open a separate terminal:
+
+```bash
+cd team-management-app
+npm install
+npm start
+```
+
+Use the frontend URL printed by the development server. Ensure the frontend's API configuration points to the locally running backend.
+
+If the project uses a different npm script, check `package.json` and substitute the appropriate command.
+
+### 4. Verify the application
+
+- Confirm all Docker services are running.
+- Verify the frontend can communicate with the API.
+- Test task creation and status updates.
+- Verify RabbitMQ messaging and background processing.
+- Confirm the audit trail and sprint summary work as expected.
+
+### Troubleshooting
+
+Inspect backend and worker logs:
 
 ```bash
 docker compose logs -f api worker
 ```
 
-### 4. Start the frontend
+Inspect all container logs:
 
-Run the Angular frontend separately using the scripts defined in `team-management-app/package.json`. Configure its API URL to point to the locally running backend.
+```bash
+docker compose logs -f
+```
 
-### 5. Verify the application
-
-- Confirm the API starts and responds to requests.
-- Confirm SQL Server is ready and the database schema is initialized.
-- Confirm RabbitMQ is accessible and the worker successfully connects.
-- Test a complete task workflow, including any asynchronous processing involved.
-
-**Note:** The commands above describe the intended local workflow. Database initialization, migrations, service readiness and frontend configuration must be verified against the current implementation before treating this setup as fully tested.
+**Note:** The Angular frontend currently runs separately from Docker Compose. The AI integration is under development and will be documented as a completed feature after it has been tested.
 
 Check the Compose configuration and application settings for the required environment variables, ports, database initialization, and connection strings before starting the API, frontend, and worker.
 
