@@ -1,9 +1,137 @@
 <div class="kanban-container">
-  <div *ngIf="tasksByStatus$ | async as grouped; else loading" class="kanban-content">
-    <h1 class="kanban-title">Kanban Board</h1>
-    <button class="create-task-btn" matButton="filled" (click)="openCreateTaskModal()">Create Task</button>
+  @if (tasksByStatus$ | async; as grouped) {
+  <div class="kanban-content">
+    <header class="dashboard-header">
+      <div>
+        <p class="eyebrow">TEAM OVERVIEW</p>
+        <h1 class="kanban-title">Sprint dashboard</h1>
+        <p class="dashboard-subtitle">A live view of workload, delivery progress, and upcoming deadlines.</p>
+      </div>
+      <button class="create-task-btn" matButton="filled" (click)="openCreateTaskModal()">Create Task</button>
+    </header>
+
+    @if (dashboardMetrics$ | async; as metrics) {
+      <section class="dashboard-metrics" aria-label="Sprint metrics">
+        <article class="metric-card metric-total">
+          <span class="metric-label">Total tasks</span>
+          <strong class="metric-value">{{ metrics.total }}</strong>
+          <span class="metric-detail">Across all board columns</span>
+        </article>
+        <article class="metric-card metric-completed">
+          <span class="metric-label">Completed</span>
+          <strong class="metric-value">{{ metrics.completed }}</strong>
+          <span class="metric-detail">{{ metrics.completionPercentage }}% of all tasks</span>
+        </article>
+        <article class="metric-card metric-active">
+          <span class="metric-label">In progress</span>
+          <strong class="metric-value">{{ metrics.active }}</strong>
+          <span class="metric-detail">In Progress and Review</span>
+        </article>
+        <article class="metric-card metric-pending">
+          <span class="metric-label">Not started</span>
+          <strong class="metric-value">{{ metrics.pending }}</strong>
+          <span class="metric-detail">Backlog and To Do</span>
+        </article>
+        <article class="metric-card metric-overdue">
+          <span class="metric-label">Overdue</span>
+          <strong class="metric-value">{{ metrics.overdue }}</strong>
+          <span class="metric-detail">{{ metrics.dueSoon }} due in the next 7 days</span>
+        </article>
+      </section>
+
+      <section class="charts-grid" aria-label="Task charts">
+        <article class="chart-card">
+          <div class="chart-heading">
+            <div>
+              <h2>Tasks by status</h2>
+              <p>Where work currently stands</p>
+            </div>
+            <span class="chart-total">{{ metrics.total }} total</span>
+          </div>
+          @if (metrics.total === 0) {
+            <p class="chart-empty">Create a task to see status distribution.</p>
+          } @else {
+            <div class="chart-rows">
+              @for (item of metrics.statuses; track item.label) {
+                <div class="chart-row">
+                  <div class="chart-row-label">
+                    <span>{{ item.label }}</span>
+                    <strong>{{ item.count }}</strong>
+                  </div>
+                  <div class="chart-track" role="progressbar" [attr.aria-label]="item.label + ' tasks'"
+                    [attr.aria-valuenow]="item.count" [attr.aria-valuemin]="0" [attr.aria-valuemax]="metrics.total"
+                    [attr.aria-valuetext]="item.count + ' of ' + metrics.total + ' tasks (' + item.percentage + '%)'">
+                    <span class="chart-bar" [style.width.%]="item.percentage" [style.background-color]="item.color"></span>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+          <div class="completion-track" role="progressbar" aria-label="Sprint completion"
+            [attr.aria-valuenow]="metrics.completionPercentage" [attr.aria-valuemin]="0" [attr.aria-valuemax]="100">
+            <span [style.width.%]="metrics.completionPercentage"></span>
+          </div>
+          <p class="completion-caption">{{ metrics.completionPercentage }}% complete</p>
+        </article>
+
+        <article class="chart-card">
+          <div class="chart-heading">
+            <div>
+              <h2>Priority distribution</h2>
+              <p>Task volume by priority</p>
+            </div>
+          </div>
+          @if (metrics.total === 0) {
+            <p class="chart-empty">Priority insights will appear when tasks are added.</p>
+          } @else {
+            <div class="chart-rows">
+              @for (item of metrics.priorities; track item.label) {
+                <div class="chart-row">
+                  <div class="chart-row-label">
+                    <span>{{ item.label }}</span>
+                    <strong>{{ item.count }}</strong>
+                  </div>
+                  <div class="chart-track" role="progressbar" [attr.aria-label]="item.label + ' priority tasks'"
+                    [attr.aria-valuenow]="item.count" [attr.aria-valuemin]="0" [attr.aria-valuemax]="metrics.total"
+                    [attr.aria-valuetext]="item.count + ' of ' + metrics.total + ' tasks (' + item.percentage + '%)'">
+                    <span class="chart-bar" [style.width.%]="item.percentage" [style.background-color]="item.color"></span>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+          <p class="chart-footnote">High, Critical, and Blocker priorities may need extra attention.</p>
+        </article>
+      </section>
+    }
+
+    <section class="summary-panel" aria-labelledby="summary-heading" [attr.aria-busy]="isSummaryLoading()">
+      <div class="summary-actions">
+        <h2 id="summary-heading">AI sprint summary</h2>
+        <button matButton="filled" type="button" [disabled]="isSummaryLoading()"
+          aria-describedby="summary-mapping-note" (click)="generateSprintSummary()">
+          {{ isSummaryLoading() ? 'Generating summary...' : 'Generate summary' }}
+        </button>
+      </div>
+      <p class="summary-note" id="summary-mapping-note">
+        Done is counted as completed; In Progress and Review as active; Backlog and To Do as pending.
+      </p>
+      @if (isSummaryLoading()) {
+        <p class="summary-status" role="status">Asking the AI service for a sprint summary...</p>
+      }
+      @if (summaryError(); as error) {
+        <p class="summary-error" role="alert">{{ error }}</p>
+      }
+      @if (sprintSummary(); as summary) {
+        <div class="summary-result" aria-live="polite">
+          <h3>Summary</h3>
+          <p>{{ summary }}</p>
+        </div>
+      }
+    </section>
     <div class="columns-container">
-      <div *ngFor="let column of columns" cdkDropList [cdkDropListData]="grouped[column]"
+      @for (column of columns; track column) {
+      <div cdkDropList [cdkDropListData]="grouped[column]"
         [cdkDropListConnectedTo]="columns" [id]="column" (cdkDropListDropped)="drop($event)"
         class="column">
 
@@ -26,10 +154,10 @@
           }
         }
       </div>
+      }
     </div>
   </div>
-
-  <ng-template #loading>
+  } @else {
     <div class="loading-state">Loading tasks...</div>
-  </ng-template>
+  }
 </div>

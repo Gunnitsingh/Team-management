@@ -1,5 +1,10 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using System.Text.Json.Serialization;
+using team_management_api.Infrastructure;
+using team_management_api.Interface;
+using team_management_api.Options;
+using team_management_api.AI.SprintSummary;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,8 +22,19 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         sqlOptions => sqlOptions.EnableRetryOnFailure()));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.Configure<OllamaOptions>(builder.Configuration.GetSection(OllamaOptions.SectionName));
+
+builder.Services.AddHttpClient<ILLMClient, OllamaClient>((sp, client) =>
+{
+    var options = sp.GetRequiredService<IOptions<OllamaOptions>>().Value;
+
+    client.BaseAddress = new Uri(options.BaseUrl);
+    client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
+});
 builder.Services.AddSingleton<IMessagePublisher, RabbitMqPublisher>();
 builder.Services.AddScoped<ConcurrencySaveHelper>();
+builder.Services.AddScoped<ISprintSummaryPromptBuilder, SprintSummaryPromptBuilder>();
+builder.Services.AddScoped<ISprintSummaryService, SprintSummaryService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ITaskService, TaskService>();
 builder.WebHost.UseUrls("http://0.0.0.0:80");

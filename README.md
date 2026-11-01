@@ -168,6 +168,14 @@ The project is intended to demonstrate practical engineering decisions around:
 - Reliable processing and consistency patterns, where implemented
 - Containerized development and repeatable setup
 
+### AI-Assisted Sprint Summaries
+
+- Generate AI-assisted sprint summaries using sprint and task data.
+- Integrate a locally hosted language model through Ollama.
+- Keep sprint records in the application database as the source of truth; AI generates summaries rather than modifying task records.
+
+**Status:** Implemented and verified locally. Production deployment and resilience testing remain future improvements.
+
 ## Roadmap
 
 Planned enhancements may include:
@@ -175,7 +183,7 @@ Planned enhancements may include:
 - Completing additional task and sprint workflows
 - Expanding automated test coverage
 - Improving deployment and CI/CD automation
-- Evaluating AI-assisted sprint summaries and task insights
+
 
 Roadmap items are planned enhancements, not claims about existing functionality.
 
