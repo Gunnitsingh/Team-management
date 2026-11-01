@@ -10,6 +10,8 @@ services:
       RabbitMq__HostName: rabbitmq
       RabbitMq__Port: 5672
       ConnectionStrings__DefaultConnection: Server=sqlserver,1433;Database=TeamManagementDb;User Id=sa;Password=YourStrong@123;TrustServerCertificate=True;
+      Ollama__BaseUrl: http://host.docker.internal:11434
+      Ollama__Model: llama3.1:8b
     depends_on:
       - rabbitmq
       - sqlserver

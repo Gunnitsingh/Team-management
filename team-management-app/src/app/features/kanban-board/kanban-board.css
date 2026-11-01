@@ -6,13 +6,237 @@
   width: 100%;
 }
 
+.dashboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0.5rem;
+}
+
+.eyebrow {
+  margin: 0 0 0.25rem;
+  color: #475569;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
 .kanban-title {
-  text-align: center;
-  margin-bottom: 1.5rem;
+  margin: 0;
+  color: #172554;
+  font-size: clamp(1.7rem, 3vw, 2.35rem);
+}
+
+.dashboard-subtitle {
+  margin: 0.4rem 0 0;
+  color: #475569;
 }
 
 .create-task-btn {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.dashboard-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0.85rem;
+  margin: 1.25rem 0.5rem;
+}
+
+.metric-card {
+  display: flex;
+  min-height: 132px;
+  flex-direction: column;
+  justify-content: space-between;
+  border: 1px solid #dbe3ee;
+  border-top: 4px solid var(--metric-color);
+  border-radius: 10px;
+  padding: 1rem;
+  background: #fff;
+  box-shadow: 0 3px 12px rgb(15 23 42 / 5%);
+}
+
+.metric-total {
+  --metric-color: #2563eb;
+}
+
+.metric-completed {
+  --metric-color: #059669;
+}
+
+.metric-active {
+  --metric-color: #7c3aed;
+}
+
+.metric-pending {
+  --metric-color: #d97706;
+}
+
+.metric-overdue {
+  --metric-color: #dc2626;
+}
+
+.metric-label {
+  color: #475569;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.metric-value {
+  color: #172554;
+  font-size: 2rem;
+  line-height: 1.1;
+}
+
+.metric-detail {
+  color: #475569;
+  font-size: 0.8rem;
+}
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
   margin: 0.5rem;
+}
+
+.chart-card {
+  min-width: 0;
+  border: 1px solid #dbe3ee;
+  border-radius: 10px;
+  padding: 1.1rem;
+  background: #fff;
+  box-shadow: 0 3px 12px rgb(15 23 42 / 5%);
+}
+
+.chart-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.chart-heading h2 {
+  margin: 0;
+  color: #172554;
+  font-size: 1.1rem;
+}
+
+.chart-heading p,
+.chart-footnote,
+.completion-caption {
+  margin: 0.35rem 0 0;
+  color: #475569;
+  font-size: 0.85rem;
+}
+
+.chart-total {
+  border-radius: 999px;
+  padding: 0.3rem 0.65rem;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.chart-rows {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.chart-row-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.35rem;
+  color: #334155;
+  font-size: 0.88rem;
+}
+
+.chart-row-label strong {
+  color: #172554;
+}
+
+.chart-track,
+.completion-track {
+  overflow: hidden;
+  height: 0.65rem;
+  border-radius: 999px;
+  background: #e8edf4;
+}
+
+.chart-bar,
+.completion-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  transition: width 250ms ease;
+}
+
+.completion-track {
+  margin-top: 1.35rem;
+  height: 0.8rem;
+}
+
+.completion-track span {
+  background: linear-gradient(90deg, #10b981, #059669);
+}
+
+.completion-caption {
+  text-align: right;
+  font-weight: 600;
+}
+
+.chart-empty {
+  margin: 1.5rem 0;
+  color: #475569;
+  font-size: 0.9rem;
+}
+
+.chart-footnote {
+  margin-top: 1.1rem;
+}
+
+.summary-panel {
+  border: 1px solid #687386;
+  border-radius: 8px;
+  margin: 0.5rem;
+  padding: 1rem;
+  background-color: #f7f9fc;
+}
+
+.summary-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.summary-actions h2,
+.summary-result h3 {
+  margin: 0;
+}
+
+.summary-note,
+.summary-status,
+.summary-error,
+.summary-result p {
+  margin: 0.75rem 0 0;
+  color: #333;
+}
+
+.summary-error {
+  color: #a32121;
+}
+
+.summary-result {
+  border-top: 1px solid #c5ccd6;
+  margin-top: 1rem;
+  padding-top: 1rem;
 }
 
 .columns-container {
@@ -82,4 +306,24 @@
 .delete-button {
   height: 20px;
   margin-top: 0.5rem;
+}
+
+@media (max-width: 600px) {
+  .dashboard-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .dashboard-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .summary-actions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }
